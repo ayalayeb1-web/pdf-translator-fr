@@ -84,6 +84,23 @@ function toast(msg) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 2200);
 }
 
+// In-page confirmation dialog (the browser's built-in confirm box is blocked in some embeds).
+function askConfirm(message, okLabel = "Yes") {
+  return new Promise(resolve => {
+    const wrap = document.createElement("div");
+    wrap.className = "modal";
+    wrap.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true">
+      <p>${esc(message)}</p>
+      <button class="btn" id="modalOk">${esc(okLabel)}</button>
+      <button class="btn secondary" id="modalCancel">Cancel</button></div>`;
+    document.body.append(wrap);
+    const done = v => { wrap.remove(); resolve(v); };
+    wrap.querySelector("#modalOk").onclick = () => done(true);
+    wrap.querySelector("#modalCancel").onclick = () => done(false);
+    wrap.querySelector("#modalCancel").focus();
+  });
+}
+
 function isUnlocked(section, idx) {
   return idx === 0 || !!state.completed[section.lessons[idx - 1].id];
 }
@@ -203,7 +220,9 @@ function renderProfile() {
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
   document.getElementById("reset").onclick = () => {
-    if (confirm("Erase all progress?")) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {} }; save(); renderProfile(); }
+    askConfirm("Erase all progress? This can't be undone.", "Erase").then(ok => {
+      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {} }; save(); renderProfile(); }
+    });
   };
 }
 
@@ -248,7 +267,9 @@ function lessonHeader(s, pct) {
 }
 function bindQuit() {
   document.getElementById("quit").onclick = () => {
-    if (confirm("Quit this lesson? Progress in it will be lost.")) { speechSynthesis?.cancel(); setTab(currentTab); }
+    askConfirm("Quit this lesson? Progress in it will be lost.", "Quit").then(ok => {
+      if (ok) { window.speechSynthesis?.cancel(); setTab(currentTab); }
+    });
   };
 }
 

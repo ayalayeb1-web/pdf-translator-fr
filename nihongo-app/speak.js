@@ -1,17 +1,72 @@
 "use strict";
 // Speak tab: free scripted role-plays (runs fully in the browser) plus an
-// optional AI tutor that is only shown when server.js is running with an API key.
+// optional AI tutor. The tutor is shown when either:
+//  - the app runs as a claude.ai artifact (uses the viewer's own Claude account), or
+//  - server.js is running with an API key.
 
-const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const IN_CLAUDE = typeof window.claude?.use === "function";
+// Microphones are blocked inside the claude.ai viewer, so voice input is local-only.
+const Recognition = IN_CLAUDE ? null : (window.SpeechRecognition || window.webkitSpeechRecognition);
 let aiAvailable = null; // null = not checked yet
+let sampleFn = null;
 
 async function checkAi() {
-  if (aiAvailable !== null || location.protocol === "file:") return (aiAvailable = aiAvailable || false);
+  if (aiAvailable !== null) return aiAvailable;
+  if (IN_CLAUDE) {
+    try { sampleFn = await window.claude.use("sample"); } catch (_) { sampleFn = null; }
+    return (aiAvailable = !!sampleFn);
+  }
+  if (location.protocol === "file:") return (aiAvailable = false);
   try {
     const r = await fetch("api/health");
     aiAvailable = r.ok && (await r.json()).ai === true;
   } catch (_) { aiAvailable = false; }
   return aiAvailable;
+}
+
+const TUTOR_RULES = sc => `You are a friendly Japanese conversation partner in a language-learning app for beginners.
+Role-play scenario: "${sc.title}". You play: ${sc.partner}. The learner's goal: ${sc.goal}.
+
+Each turn:
+- reply: stay in character and answer in short, natural, polite Japanese (one or two sentences, mostly kana with only very common kanji), with romaji and an English translation. Keep the conversation moving toward the learner's goal; when the goal is reached, wrap up warmly.
+- feedback: judge the learner's most recent message. They may write in Japanese or romaji, so be forgiving about spelling and focus on real grammar, word choice and politeness. If it was fine, set correct=true and leave the other feedback fields empty. Otherwise give a corrected version and a one-sentence explanation in simple English. If there is no learner message yet, set correct=true.
+- suggestions: two or three short things the learner could say next, at beginner level.
+
+Reply with only one JSON object in exactly this shape:
+{"reply":{"jp":"…","romaji":"…","en":"…"},"feedback":{"correct":true,"corrected_jp":"","corrected_romaji":"","explanation":""},"suggestions":[{"jp":"…","romaji":"…","en":"…"}]}
+
+The role-play starts now. Greet the learner in character.`;
+
+// One tutor turn. Returns {reply, feedback, suggestions}; throws Error with a viewer-facing message.
+async function tutorTurn(sc, history) {
+  if (sampleFn) {
+    const turns = [{ role: "user", content: TUTOR_RULES(sc) }];
+    for (const t of history.slice(-30)) {
+      turns.push(t.role === "assistant" ? { role: "assistant", content: t.text } : { role: "user", content: `Learner said: ${t.text}` });
+    }
+    try {
+      const data = await sampleFn.json(turns, { modelTier: "quick", cache: false });
+      if (!data?.reply?.jp) throw { code: "invalid_json" };
+      return data;
+    } catch (e) {
+      const msg = {
+        not_granted: "The AI tutor needs your permission to use Claude. Reload the page to be asked again.",
+        sampling_disabled: "Claude isn't available on this account.",
+        rate_limited: "You've hit a usage limit. Wait a bit, then try again.",
+        invalid_json: "The tutor's answer came back garbled. Try again.",
+        refused: "The tutor couldn't answer that. Try saying something else.",
+      }[e?.code] || "The tutor couldn't be reached. Try again.";
+      if (e?.code === "not_granted" || e?.code === "sampling_disabled") aiAvailable = false;
+      throw new Error(msg);
+    }
+  }
+  const r = await fetch("api/tutor", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scenario: { title: sc.title, goal: sc.goal, partner: sc.partner }, history }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Request failed");
+  return data;
 }
 
 // ---------- Answer scoring ----------
@@ -89,8 +144,9 @@ async function renderSpeak() {
   const draw = () => {
     $view.innerHTML = `
       <h2>Speak</h2>
-      <p class="muted">Role-play real situations out loud. Tap 🎤 and answer in Japanese — or type romaji if you can't use a mic.</p>
-      ${Recognition ? "" : `<div class="card">🎤 Speech recognition isn't available in this browser (try Chrome or Edge). You can still type your answers.</div>`}
+      <p class="muted">${Recognition
+        ? "Role-play real situations out loud. Tap 🎤 and answer in Japanese, or type romaji if you can't use a mic."
+        : `Role-play real situations. Listen to your partner with 🔊 and type your answer in Japanese or romaji. ${IN_CLAUDE ? "Voice input isn't available in the online version." : "For voice input, open the app in Chrome or Edge."}`}</p>
       ${SCENARIOS.map(sc => `
         <button class="card scenario" data-id="${sc.id}">
           <span class="emoji">${sc.emoji}</span>
@@ -120,7 +176,7 @@ function speakShell(sc, subtitle) {
     <div id="hints" class="hints"></div>
     <div id="controls"></div>
   </div>`;
-  document.getElementById("quit").onclick = () => { speechSynthesis?.cancel(); setTab("speak"); };
+  document.getElementById("quit").onclick = () => { window.speechSynthesis?.cancel(); setTab("speak"); };
 }
 
 function answerControls(onAnswer, extraButtons = "") {
@@ -139,7 +195,7 @@ function answerControls(onAnswer, extraButtons = "") {
   const mic = document.getElementById("mic");
   if (mic) mic.onclick = () => {
     if (typed.value.trim()) return submitTyped();
-    speechSynthesis?.cancel();
+    window.speechSynthesis?.cancel();
     mic.classList.add("listening");
     listen(onAnswer, () => mic.classList.remove("listening"));
   };
@@ -220,12 +276,7 @@ function runAiChat(sc) {
   const ask = async () => {
     document.getElementById("controls").innerHTML = `<p class="typing">${esc(sc.partner)} is typing…</p>`;
     try {
-      const r = await fetch("api/tutor", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario: { title: sc.title, goal: sc.goal, partner: sc.partner }, history }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Request failed");
+      const data = await tutorTurn(sc, history);
       const fb = data.feedback;
       if (fb && history.length) {
         const last = document.querySelector("#chat .bubble.me:last-child");
@@ -249,7 +300,10 @@ function runAiChat(sc) {
       document.getElementById("end").onclick = () => { if (turns) addXp(5 + turns * 2); setTab("speak"); };
     } catch (e) {
       document.getElementById("controls").innerHTML =
-        `<div class="feedback bad">AI tutor unavailable: ${esc(e.message)}</div><button class="btn secondary" id="back">Back</button>`;
+        `<div class="feedback bad">${esc(e.message)}</div>
+         <button class="btn" id="retry">Try again</button>
+         <button class="btn secondary" id="back" style="margin-top:10px">Back</button>`;
+      document.getElementById("retry").onclick = ask;
       document.getElementById("back").onclick = () => setTab("speak");
     }
   };
