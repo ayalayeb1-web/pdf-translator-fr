@@ -144,6 +144,7 @@ async function renderSpeak() {
   const draw = () => {
     $view.innerHTML = `
       <h2>Speak</h2>
+      ${Mascot.bubbleHtml({ jp: "声に出して練習しよう！", en: "Practice out loud — speaking is the fastest way to remember!" }, "happy", 64)}
       <p class="muted">${Recognition
         ? "Role-play real situations out loud. Tap 🎤 and answer in Japanese, or type romaji if you can't use a mic."
         : `Role-play real situations. Listen to your partner with 🔊 and type your answer in Japanese or romaji. ${IN_CLAUDE ? "Voice input isn't available in the online version." : "For voice input, open the app in Chrome or Edge."}`}</p>
@@ -156,6 +157,7 @@ async function renderSpeak() {
         </button>
         ${aiAvailable ? `<button class="btn secondary" style="margin:-6px 0 16px" data-ai="${sc.id}">🤖 Chat with AI</button>` : ""}
       `).join("")}`;
+    Mascot.bindTap($view);
     $view.querySelectorAll("[data-id]").forEach(b => b.onclick = () => runScenario(SCENARIOS.find(s => s.id === b.dataset.id)));
     $view.querySelectorAll("[data-ai]").forEach(b => b.onclick = () => runAiChat(SCENARIOS.find(s => s.id === b.dataset.ai)));
   };
@@ -255,6 +257,7 @@ function runScenario(sc) {
     state.speak[sc.id] = Math.max(state.speak[sc.id] || 0, avg);
     const xp = 5 + Math.round(avg / 10);
     addXp(xp);
+    Mascot.sfx("finish"); if (avg >= 75) Mascot.confetti();
     document.getElementById("hints").innerHTML = "";
     document.getElementById("controls").innerHTML = `
       <div class="feedback ok">${avg >= 75 ? "🌸" : "💪"} Conversation complete! ${avg}% · +${xp} XP</div>

@@ -111,11 +111,7 @@ const lessonsOf = level => level.units.flatMap(u => u.lessons);
 state.aiLessons = state.aiLessons || {};
 
 function applyAiLesson(lesson, data) {
-  lesson.explain = data.explain;
-  lesson.examples = data.examples;
-  lesson.exercises = data.exercises;
-  lesson.items = data.items;
-  lesson.generated = true;
+  Object.assign(lesson, data, { generated: true });
   registerItems(lesson);
 }
 // Restore lessons generated in earlier visits.
@@ -125,6 +121,19 @@ LEVELS.forEach(l => l.units.forEach(u => u.lessons.forEach(ls => {
 
 function lessonPrompt(lesson) {
   const level = LEVELS.find(l => l.id === lesson.level);
+  if (lesson.type === "reading") return `You are writing one reading lesson of a Japanese course for English speakers.
+Level: CEFR ${level.id} (about JLPT ${level.jlpt}, ${level.name}). Text type: ${lesson.point}.
+
+Reply with only one JSON object, in exactly this shape:
+{
+ "tokens": [{"t": "surface text", "r": "hiragana reading if it contains kanji, else empty", "en": "short English meaning or grammar role; empty for punctuation"}],
+ "translation": "natural English translation of the whole text",
+ "questions": [{"q": "comprehension question in English", "options": ["4", "short", "English", "options"], "answer": "the correct option"}]
+}
+Rules:
+- The text is 5-8 sentences, natural and correct, at this level, with kanji a learner at this level reads.
+- Split the text into word-sized tokens (a word with its okurigana; particles and punctuation are their own tokens). Joined in order the tokens give the full text.
+- 4 comprehension questions; exactly one option is correct.`;
   return `You are writing one lesson of a Japanese course for English speakers.
 Level: CEFR ${level.id} (about JLPT ${level.jlpt}, ${level.name}).
 Lesson: "${lesson.title}". Grammar point / skill: ${lesson.point}.
@@ -149,6 +158,13 @@ Rules:
 
 function cleanAiLesson(lesson, raw) {
   const str = v => (typeof v === "string" ? v.trim() : "");
+  if (lesson.type === "reading") {
+    const tokens = (raw.tokens || []).map(t => ({ t: str(t.t), r: str(t.r) !== str(t.t) ? str(t.r) : "", en: str(t.en) })).filter(t => t.t);
+    const questions = (raw.questions || []).map(q => ({ q: str(q.q), options: (q.options || []).map(str).filter(Boolean), answer: str(q.answer) }))
+      .filter(q => q.q && q.options.length >= 2 && q.options.includes(q.answer));
+    if (tokens.length < 15 || questions.length < 2) throw new Error("incomplete");
+    return { tokens, translation: str(raw.translation), questions };
+  }
   const examples = (raw.examples || []).map(e => [str(e.jp), str(e.romaji), str(e.en)]).filter(e => e[0] && e[2]);
   const exercises = (raw.exercises || []).map(e => {
     if (e.fill) {
@@ -175,8 +191,9 @@ async function generateLesson(lesson) {
   $view.innerHTML = `<div class="lesson done">
     <div class="emoji">✍️</div>
     <h2>Writing your lesson…</h2>
+    ${Mascot.bubbleHtml({ jp: "ちょっと待ってね！", en: "Give me a moment — writing your lesson!" }, "wink", 90, "finish-kitsu")}
     <p class="muted">${esc(lesson.point)}</p>
-    <p>The AI tutor is preparing explanations, examples and exercises. This takes up to a minute, and only happens once.</p>
+    <p>Kitsu is preparing ${lesson.type === "reading" ? "a reading passage and questions" : "explanations, examples and exercises"}. This takes up to a minute, and only happens once.</p>
     <div class="spacer"></div>
     <button class="btn secondary" id="cancelGen">Cancel</button>
   </div>`;
@@ -239,7 +256,11 @@ function renderHome() {
   const level = currentLevel();
   const all = lessonsOf(level);
   const done = all.filter(l => state.completed[l.id]).length;
+  const wotd = wordOfTheDay();
+  const nothingDone = !Object.keys(state.completed).length;
   let html = `
+    ${Mascot.homeCard()}
+    ${!state.placement && nothingDone ? `<button class="btn" id="placeBtn" style="margin-bottom:14px">🎯 Find my level (2 min)</button>` : ""}
     <div class="levels" role="tablist">${LEVELS.map(l => `
       <button class="level-chip ${l.id === level.id ? "active" : ""}" data-level="${l.id}" role="tab" aria-selected="${l.id === level.id}">
         <b>${l.id}</b><small>${l.jlpt}</small></button>`).join("")}
@@ -251,7 +272,21 @@ function renderHome() {
       <div class="muted" style="margin-top:6px;font-size:.85rem">${done}/${all.length} lessons · Daily goal ${Math.min(got, DAILY_GOAL)}/${DAILY_GOAL} XP</div>
       ${due ? `<p style="margin:10px 0 0">🔁 <b>${due}</b> card${due > 1 ? "s" : ""} ready to review.</p>` : ""}
       ${level.ai ? `<p class="muted" style="margin:10px 0 0;font-size:.85rem">✨ Lessons at this level are written by AI the first time you open them, then saved on this device. Uses your claude.ai account.</p>` : ""}
-    </div>`;
+      <div class="level-links">
+        ${videoLink(`learn Japanese JLPT ${level.jlpt} lesson`, `${level.jlpt} video lessons`)}
+        ${videoLink(`Japanese listening practice JLPT ${level.jlpt}`, "Listening practice")}
+        ${videoLink(`learn Japanese with anime ${level.jlpt}`, "Learn with anime")}
+        ${state.placement || !nothingDone ? `<button class="chip-btn" id="placeBtn">🎯 Retake level test</button>` : ""}
+      </div>
+    </div>
+    ${wotd ? `<div class="card wotd">
+      <div class="w-meta"><div class="muted" style="font-size:.75rem;font-weight:800;letter-spacing:.06em">WORD OF THE DAY</div>
+        <div class="w-jp">${esc(wotd.jp)}</div>
+        <div class="muted">${wotd.kana ? esc(wotd.kana) + " · " : ""}${esc(wotd.romaji)} — ${esc(wotd.en)}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="speak small" id="wotdSay" aria-label="Play">🔊</button>
+        <button class="chip-btn" id="wotdAdd">${state.srs[wotd.id] ? "✓ In review" : "+ Review"}</button>
+      </div></div>` : ""}`;
   level.units.forEach((unit, u) => {
     const udone = unit.lessons.filter(l => state.completed[l.id]).length;
     html += `
@@ -271,6 +306,15 @@ function renderHome() {
     html += `</div>`;
   });
   $view.innerHTML = html;
+  Mascot.bindTap($view);
+  document.getElementById("placeBtn")?.addEventListener("click", startPlacement);
+  if (wotd) {
+    document.getElementById("wotdSay").onclick = () => speak(wotd.kana || wotd.jp);
+    document.getElementById("wotdAdd").onclick = () => {
+      if (!state.srs[wotd.id]) { state.srs[wotd.id] = { box: 0, due: Date.now(), seen: 0, right: 0 }; save(); toast("Added to your review deck"); }
+      renderHome();
+    };
+  }
   $view.querySelectorAll("[data-level]").forEach(b => b.onclick = () => { state.level = b.dataset.level; save(); renderHome(); });
   $view.querySelectorAll(".node:not(.locked)").forEach(n =>
     n.addEventListener("click", () => startLesson(level.units[n.dataset.u].lessons[n.dataset.l])));
@@ -291,31 +335,46 @@ function renderReview() {
   if (due.length) go.onclick = () => startSession({ title: "Review", items: due.slice(0, 15), review: true });
 }
 
-let chartScript = "Hiragana";
+let chartScript = "Hiragana", chartMode = "hear";
 function renderChart() {
   const kanaUnits = LEVELS[0].units.filter(u => u.lessons[0]?.type === "kana");
+  const kanjiList = Object.values(ALL_ITEMS).filter(i => i.type === "kanji");
+  const isKanji = chartScript === "Kanji";
   const unit = kanaUnits.find(u => u.title === chartScript) || kanaUnits[0];
+  const flat = isKanji ? kanjiList : unit.lessons.flatMap(l => l.items.map(it => ALL_ITEMS[it.id] || it));
   let cells = "";
-  unit.lessons.forEach(l => {
+  if (isKanji) cells = kanjiList.map(it => `<button class="cell ${mastered(it.id) ? "mastered" : ""}" data-id="${esc(it.id)}"><span class="k">${esc(it.jp)}</span><span class="r">${esc(it.en.split(/[,(]/)[0].trim())}</span></button>`).join("");
+  else unit.lessons.forEach(l => {
     const items = l.items;
     // Pad Y and W rows so columns line up with the vowels.
     const layout = items.length === 3 && items[0].romaji === "ya" ? [items[0], null, items[1], null, items[2]]
       : items.length === 3 ? [items[0], null, null, items[1], items[2]] : items;
     layout.forEach(it => {
       cells += it
-        ? `<button class="cell ${mastered(it.id) ? "mastered" : ""}" data-jp="${esc(it.jp)}"><span class="k">${esc(it.jp)}</span><span class="r">${esc(it.romaji)}</span></button>`
+        ? `<button class="cell ${mastered(it.id) ? "mastered" : ""}" data-id="${esc(it.id)}"><span class="k">${esc(it.jp)}</span><span class="r">${esc(it.romaji)}</span></button>`
         : `<div class="cell empty"></div>`;
     });
   });
   $view.innerHTML = `
-    <h2>Kana chart</h2>
+    <h2>Write & read</h2>
     <div class="seg">
-      ${kanaUnits.map(u => `<button class="btn ${u === unit ? "" : "secondary"}" data-script="${u.title}">${u.title}</button>`).join("")}
+      ${[...kanaUnits.map(u => u.title), "Kanji"].map(t => `<button class="btn ${t === chartScript ? "" : "secondary"}" data-script="${t}">${t}</button>`).join("")}
     </div>
-    <p class="muted">Tap a character to hear it. Green border = mastered.</p>
+    <div class="seg mode">
+      <button class="chip-btn ${chartMode === "hear" ? "active" : ""}" data-mode="hear">🔊 Tap to hear</button>
+      <button class="chip-btn ${chartMode === "trace" ? "active" : ""}" data-mode="trace">✍️ Tap to trace</button>
+      <button class="chip-btn" id="drill">🎲 Random drill</button>
+    </div>
+    <p class="muted">${isKanji ? `${kanjiList.length} kanji in the course.` : ""} Green border = mastered.</p>
     <div class="chart">${cells}</div>`;
   $view.querySelectorAll("[data-script]").forEach(b => b.onclick = () => { chartScript = b.dataset.script; renderChart(); });
-  $view.querySelectorAll(".cell[data-jp]").forEach(c => c.onclick = () => speak(c.dataset.jp));
+  $view.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { chartMode = b.dataset.mode; renderChart(); });
+  document.getElementById("drill").onclick = () => openTracer(shuffle(flat).slice(0, 10), 0);
+  $view.querySelectorAll(".cell[data-id]").forEach(c => c.onclick = () => {
+    const it = ALL_ITEMS[c.dataset.id];
+    if (chartMode === "trace") openTracer(flat, flat.findIndex(x => x.id === it.id));
+    else speak(it.kana ? it.kana.split("・")[0] : it.jp);
+  });
 }
 
 function renderProfile() {
@@ -353,10 +412,19 @@ function renderProfile() {
       <div class="row-list"><span>🈶 Kanji mastered</span><b>${kanjiKnown}</b></div>
       <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
     </div>
+    <div class="card">
+      <b>Settings</b>
+      <label class="toggle-row" for="optVoice"><span>🦊 Kitsu speaks out loud</span><input type="checkbox" id="optVoice" ${state.voice !== false ? "checked" : ""}></label>
+      <label class="toggle-row" for="optSfx"><span>🔔 Sound effects</span><input type="checkbox" id="optSfx" ${state.sfx !== false ? "checked" : ""}></label>
+      <label class="toggle-row" for="optFuri"><span>あ Furigana in readings</span><input type="checkbox" id="optFuri" ${state.furigana !== false ? "checked" : ""}></label>
+    </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
+  document.getElementById("optVoice").onchange = e => { state.voice = e.target.checked; save(); };
+  document.getElementById("optSfx").onchange = e => { state.sfx = e.target.checked; save(); if (e.target.checked) Mascot.sfx("right"); };
+  document.getElementById("optFuri").onchange = e => { state.furigana = e.target.checked; save(); };
   document.getElementById("reset").onclick = () => {
     askConfirm("Erase all progress? This can't be undone.", "Erase").then(ok => {
-      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {}, aiLessons: state.aiLessons }; save(); renderProfile(); }
+      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {}, aiLessons: state.aiLessons, notes: state.notes }; save(); renderProfile(); }
     });
   };
 }
@@ -364,7 +432,7 @@ function renderProfile() {
 // ---------- Lessons & quiz engine ----------
 function startLesson(lesson) {
   if (lesson.ai && !lesson.generated) return generateLesson(lesson);
-  startSession({ title: lesson.title, items: lesson.items || [], lesson, intro: !state.completed[lesson.id] || lesson.type === "grammar" });
+  startSession({ title: lesson.title, items: lesson.items || [], lesson, intro: !state.completed[lesson.id] || lesson.type !== "kana" });
 }
 
 function makeQuestions(items, perItem) {
@@ -385,15 +453,17 @@ function startSession(opts) {
   const lesson = opts.lesson;
   const items = opts.items.map(i => ALL_ITEMS[i.id] || i);
   const isGrammar = lesson?.type === "grammar";
+  const isReading = lesson?.type === "reading";
   const intro = [];
-  if (opts.intro) {
+  if (isReading) intro.push({ reading: lesson });
+  else if (opts.intro) {
     if (isGrammar) intro.push({ grammar: lesson });
     items.forEach(it => intro.push({ item: it }));
   }
-  const queue = isGrammar
-    ? [...lesson.exercises.map(ex => ({ kind: ex.fill ? "fill" : "order", ex })), ...makeQuestions(items, 1)]
+  const queue = isReading ? lesson.questions.map(ex => ({ kind: "mc", ex }))
+    : isGrammar ? [...lesson.exercises.map(ex => ({ kind: ex.fill ? "fill" : "order", ex })), ...makeQuestions(items, 1)]
     : makeQuestions(items, opts.review ? 1 : 2);
-  const s = { ...opts, items, intro, introIdx: 0, queue: shuffle(queue), answered: 0, correct: 0, retries: 0 };
+  const s = { ...opts, items, intro, introIdx: 0, queue: isReading ? queue : shuffle(queue), answered: 0, correct: 0, retries: 0, combo: 0, bestCombo: 0 };
   s.total = s.queue.length;
   if (intro.length) renderIntro(s); else renderQuestion(s);
 }
@@ -402,9 +472,16 @@ function lessonHeader(s, pct) {
   return `<div class="lesson-top">
     <button class="icon-btn" id="quit" aria-label="Quit">✕</button>
     <div class="progress"><div style="width:${pct}%"></div></div>
+    ${s.combo >= 2 ? `<span class="combo">🔥${s.combo}</span>` : ""}
+    ${s.lesson ? `<button class="icon-btn" id="noteBtn" aria-label="My notes for this lesson">📝</button>` : ""}
   </div>`;
 }
-function bindQuit() {
+function videoLink(query, label) {
+  return `<a class="video-link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(query)}" target="_blank" rel="noopener">▶ ${esc(label)}</a>`;
+}
+function bindQuit(s) {
+  const nb = document.getElementById("noteBtn");
+  if (nb && s?.lesson) nb.onclick = () => openNote(s.lesson.id, s.lesson.title);
   document.getElementById("quit").onclick = () => {
     askConfirm("Quit this lesson? Progress in it will be lost.", "Quit").then(ok => {
       if (ok) { window.speechSynthesis?.cancel(); setTab(currentTab); }
@@ -419,13 +496,34 @@ function itemCardHtml(it) {
     : `${it.kana ? `<div class="reading">${esc(it.kana)}</div>` : ""}<span class="romaji">${esc(it.romaji)}</span>${it.type !== "kana" ? `<br><span class="muted">${esc(it.en)}</span>` : ""}`;
   return `<div class="prompt">New ${kind}</div>
     <div class="big ${it.jp.length > 1 ? "word" : ""}">${esc(it.jp)}</div>
-    <button class="speak" data-say="${esc(it.kana ? it.kana.split("・")[0] : it.jp)}" aria-label="Play audio">🔊</button>
-    <div class="intro-meta">${sub}</div>`;
+    <div class="card-actions">
+      <button class="speak" data-say="${esc(it.kana ? it.kana.split("・")[0] : it.jp)}" aria-label="Play audio">🔊</button>
+      ${it.type === "kana" || it.type === "kanji" ? `<button class="speak" data-trace="${esc(it.jp)}" aria-label="Practice writing">✍️</button>` : ""}
+    </div>
+    <div class="intro-meta">${sub}</div>
+    ${it.type === "kanji" || it.type === "kana" ? `<div style="text-align:center">${videoLink(`${it.jp} ${it.type === "kanji" ? "kanji" : "kana"} stroke order`, "Stroke order video")}</div>` : ""}`;
+}
+
+function readingCardHtml(lesson) {
+  const furi = state.furigana !== false;
+  return `<div class="prompt">${esc(lesson.title)}</div>
+    <div class="reading-tools">
+      <button class="chip-btn" id="readAll">🔊 Listen</button>
+      <button class="chip-btn" id="toggleFuri">${furi ? "Hide" : "Show"} furigana</button>
+      <button class="chip-btn" id="toggleTr">Translation</button>
+    </div>
+    <p class="muted" style="margin:6px 0">Tap any word to see what it means.</p>
+    <div class="passage">${lesson.tokens.map((t, i) => t.en || t.r
+      ? `<button class="tok" data-i="${i}">${furi && t.r ? `<ruby>${esc(t.t)}<rt>${esc(t.r)}</rt></ruby>` : esc(t.t)}</button>`
+      : `<span class="punct">${esc(t.t)}</span>`).join("")}</div>
+    <div class="gloss" id="gloss" hidden></div>
+    <p class="translation" id="tr" hidden>${esc(lesson.translation || "")}</p>`;
 }
 
 function grammarCardHtml(lesson) {
   return `<div class="prompt">${esc(lesson.title)}</div>
     <div class="point">${esc(lesson.point)}</div>
+    <div>${videoLink(`Japanese grammar ${lesson.point.split(/[ /]/)[0]} explained`, "Video lessons on this grammar")}</div>
     <p class="explain">${esc(lesson.explain)}</p>
     <div class="examples">${lesson.examples.map(([jp, romaji, en]) => `
       <button class="example" data-say="${esc(jp)}">
@@ -438,12 +536,28 @@ function renderIntro(s) {
   const last = s.introIdx === s.intro.length - 1;
   $view.innerHTML = `<div class="lesson">
     ${lessonHeader(s, (s.introIdx / s.intro.length) * 30)}
-    ${card.grammar ? grammarCardHtml(card.grammar) : itemCardHtml(card.item)}
+    ${card.reading ? readingCardHtml(card.reading) : card.grammar ? grammarCardHtml(card.grammar) : itemCardHtml(card.item)}
     <div class="spacer"></div>
-    <button class="btn" id="next">${last ? "Start practice" : "Next"}</button>
+    <button class="btn" id="next">${card.reading ? "Answer the questions" : last ? "Start practice" : "Next"}</button>
   </div>`;
-  bindQuit();
+  bindQuit(s);
   $view.querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(b.dataset.say));
+  $view.querySelectorAll("[data-trace]").forEach(b => b.onclick = () => openTracer([ALL_ITEMS[card.item.id] || card.item], 0));
+  if (card.reading) {
+    const lesson = card.reading;
+    document.getElementById("readAll").onclick = () => speak(lesson.tokens.map(t => t.t).join(""));
+    document.getElementById("toggleFuri").onclick = () => { state.furigana = state.furigana === false; save(); renderIntro(s); };
+    document.getElementById("toggleTr").onclick = () => { const tr = document.getElementById("tr"); tr.hidden = !tr.hidden; };
+    $view.querySelectorAll(".tok").forEach(b => b.onclick = () => {
+      const t = lesson.tokens[b.dataset.i];
+      $view.querySelectorAll(".tok.on").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      const g = document.getElementById("gloss");
+      g.hidden = false;
+      g.innerHTML = `<button class="speak small" aria-label="Play">🔊</button><div><b>${esc(t.t)}</b>${t.r ? ` <span class="muted">${esc(t.r)}</span>` : ""}<div>${esc(t.en)}</div></div>`;
+      g.querySelector("button").onclick = () => speak(t.r || t.t);
+      speak(t.r || t.t);
+    });
+  }
   if (card.item) speak(card.item.kana ? card.item.kana.split("・")[0] : card.item.jp);
   document.getElementById("next").onclick = () => {
     s.introIdx++;
@@ -462,7 +576,16 @@ function renderQuestion(s) {
   const pct = base + (s.answered / (s.total + s.retries)) * (100 - base);
   let body = "", answerCheck, answerText, sayAfter, rightId;
 
-  if (q.kind === "fill") {
+  if (q.kind === "mc") {
+    const ex = q.ex;
+    body = `<div class="prompt">${esc(ex.q)}</div>
+      <button class="chip-btn" id="rereadBtn" style="margin-bottom:6px">📖 Show the text</button>
+      <div class="passage small" id="reread" hidden>${s.lesson.tokens.map(t => esc(t.t)).join("")}</div>
+      <div class="choices one-col">${shuffle(ex.options).map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    rightId = ex.answer;
+    answerCheck = () => s.selected === ex.answer;
+    answerText = ex.answer;
+  } else if (q.kind === "fill") {
     const ex = q.ex;
     const opts = shuffle(ex.options);
     body = `<div class="prompt">Fill in the blank</div>
@@ -527,9 +650,11 @@ function renderQuestion(s) {
     <div id="fb"></div>
     <button class="btn" id="check" disabled>Check</button>
   </div>`;
-  bindQuit();
+  bindQuit(s);
   const check = document.getElementById("check");
   s.selected = null;
+  const rr = document.getElementById("rereadBtn");
+  if (rr) rr.onclick = () => { const p = document.getElementById("reread"); p.hidden = !p.hidden; };
 
   if (q.kind === "listen") { speak(sayAfter); document.getElementById("say").onclick = () => speak(sayAfter); }
   if (q.kind === "type") {
@@ -566,16 +691,16 @@ function renderQuestion(s) {
     check.dataset.done = "1";
     s.answered++;
     if (it) grade(it.id, ok);
-    if (ok) s.correct++;
-    else if (!q.retry) { s.retries++; s.queue.push({ ...q, retry: true }); } // retry once at the end
+    if (ok) { s.correct++; s.combo++; s.bestCombo = Math.max(s.bestCombo, s.combo); }
+    else { s.combo = 0; if (!q.retry) { s.retries++; s.queue.push({ ...q, retry: true }); } } // retry once at the end
     $view.querySelectorAll(".choice").forEach(c => {
       if (c.dataset.id === rightId) c.classList.add("right");
       else if (c.dataset.id === s.selected) c.classList.add("wrong");
     });
-    document.getElementById("fb").innerHTML = ok
-      ? `<div class="feedback ok">✓ Nice! <span style="font-weight:400">${esc(answerText)}</span></div>`
-      : `<div class="feedback bad">✗ Correct answer: <span style="font-weight:400">${esc(answerText)}</span></div>`;
-    if (q.kind !== "listen") speak(sayAfter);
+    document.getElementById("fb").innerHTML = `<div class="feedback ${ok ? "ok" : "bad"}">
+      ${Mascot.react(ok, s.combo)}
+      <div style="font-weight:400">${ok ? "" : "Correct answer: "}${esc(answerText)}</div></div>`;
+    if (q.kind !== "listen" && sayAfter) setTimeout(() => speak(sayAfter), 350);
     check.textContent = "Continue";
     check.disabled = false;
     check.focus();
@@ -588,18 +713,22 @@ function finishSession(s) {
   if (s.lesson) state.completed[s.lesson.id] = true;
   addXp(xp);
   $view.innerHTML = `<div class="lesson done">
-    <div class="emoji">${accuracy >= 90 ? "🌸" : accuracy >= 60 ? "🎉" : "💪"}</div>
     <h2>${s.review ? "Review complete!" : "Lesson complete!"}</h2>
     <p class="muted">${esc(s.title)}</p>
+    ${Mascot.finish(accuracy)}
     <div class="done-stats">
       <div class="card"><b>+${xp}</b>XP</div>
       <div class="card"><b>${accuracy}%</b>accuracy</div>
-      <div class="card"><b>🔥 ${currentStreak()}</b>streak</div>
+      <div class="card"><b>🔥 ${s.bestCombo}</b>best combo</div>
     </div>
+    ${s.lesson ? `<button class="chip-btn" id="noteAfter">📝 Write a note about this lesson</button>` : ""}
     <div class="spacer"></div>
     <button class="btn" id="cont">Continue</button>
   </div>`;
   document.getElementById("cont").onclick = () => setTab(s.review ? "review" : "home");
+  const na = document.getElementById("noteAfter");
+  if (na) na.onclick = () => openNote(s.lesson.id, s.lesson.title);
+  Mascot.bindTap($view);
 }
 
 // ---------- Boot ----------

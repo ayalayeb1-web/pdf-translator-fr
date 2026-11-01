@@ -17,6 +17,10 @@ const LEVELS = LEVEL_INFO.map(([id, jlpt, name, desc]) => {
     title, icon, ai: true,
     lessons: lessons.map(([lid, ltitle, point]) => ({ id: lid, title: ltitle, point, type: "grammar", ai: true, level: id })),
   }));
+  if (AI_READING[id]) {
+    const [rid, rtitle, about] = AI_READING[id];
+    units.push({ title: "Reading", icon: "📖", ai: true, lessons: [{ id: rid, title: rtitle, point: about, type: "reading", ai: true, level: id }] });
+  }
   units.forEach((u, i) => (u.color = u.color || UNIT_COLORS[i % UNIT_COLORS.length]));
   return { id, jlpt, name, desc, units, ai: !["A1", "A2"].includes(id) };
 });

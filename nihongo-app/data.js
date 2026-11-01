@@ -61,3 +61,17 @@ function kanjiLesson(id, title, chars) {
 function grammarLesson(id, title, point, explain, examples, exercises) {
   return { id, title, type: "grammar", point, explain, examples, exercises };
 }
+
+// A reading lesson. `text` is space-separated tokens written as
+//   surface[reading]{meaning}   — reading and meaning are optional (punctuation has neither).
+// questions: [question, [options...], answer]
+function readingLesson(id, title, text, translation, questions) {
+  const tokens = text.trim().split(/\s+/).map(tok => {
+    const m = tok.match(/^([^\[{]+)(?:\[([^\]]+)\])?(?:\{([^}]+)\})?$/);
+    return m ? { t: m[1], r: m[2] || "", en: (m[3] || "").replace(/_/g, " ") } : { t: tok, r: "", en: "" };
+  });
+  return {
+    id, title, type: "reading", tokens, translation,
+    questions: questions.map(([q, options, answer]) => ({ q, options, answer })),
+  };
+}

@@ -22,6 +22,22 @@ A small, offline-friendly web app for learning Japanese. It's plain HTML, CSS an
   - grammar: an explanation, examples you can tap to hear, then *fill in the blank* and *build the sentence* exercises
 - **AI-written lessons (B1–C2)**: the course outline in `course-advanced.js` lists the real grammar points. The first time you open a lesson, it is generated with Claude through the claude.ai artifact `sample` capability, which uses the viewer's own account. It is then validated and saved on the device.
 - **Quiz types**: multiple choice in both directions, listening, typing romaji (any listed kanji reading is accepted), fill in the blank, and sentence building. Missed questions come back once at the end.
+- **🦊 Kitsu the mascot**: an original fox-spirit guide.
+  - She greets you, reacts to every answer and celebrates combos and finished lessons with confetti.
+  - She speaks Japanese out loud, with English below.
+  - Tap her for tips about Japan.
+- **🎯 Placement test**: an adaptive test with up to 18 questions that sets your starting level.
+- **📖 Reading passages**: tap any word for its reading and meaning.
+  - You can show or hide furigana, listen to the whole text and see the translation.
+  - Comprehension questions follow.
+  - A1 and A2 passages are hand-written; B1 to C2 passages are AI-written.
+- **✍️ Writing practice**: trace kana and kanji over a guide and get a score for how well your ink matches the shape.
+  - Each character links to stroke-order videos.
+  - Practise from any lesson card or from the Write tab, which has a random drill.
+- **🎌 Anime Japanese**: a bonus unit with reactions and story words, plus how anime characters talk (俺, 僕, ぞ, ぜ, わ). The Speak tab has a "meet your senpai" role-play.
+- **▶ Videos**: buttons open YouTube results for each grammar point, stroke order and level, because videos can't be embedded in the app.
+- **📝 Notes**: a note for each lesson (📝 in the lesson header) plus free notes, with search.
+- **Extras**: word of the day, sound effects, answer combos, and settings to turn off the voice, sounds or furigana.
 - **Spaced repetition review**: a Leitner-box system (1, 2, 4, 8, 16, 32 days) schedules each card.
 - **🗣️ Speak (free)**: role-play real situations out loud: a café, introducing yourself, asking directions, a restaurant and a convenience store.
   - The partner speaks first. You answer with the 🎤 or by typing romaji or Japanese, and the app scores how close you were.

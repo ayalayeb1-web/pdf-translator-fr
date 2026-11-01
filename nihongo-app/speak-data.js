@@ -76,4 +76,20 @@ const SCENARIOS = [
     ],
     outro: ["ありがとうございました！", "arigatou gozaimashita!", "Thank you very much!"],
   },
+  {
+    id: "senpai", emoji: "🎌", title: "Anime: meet your senpai", level: "Beginner",
+    goal: "Join the school's Japanese club, anime style!",
+    partner: "Senpai (club leader)",
+    turns: [
+      { npc: ["あっ、新入部員？名前は？", "a, shinnyuu buin? namae wa?", "Oh, a new club member? What's your name?"],
+        answers: [["アレックスです。よろしくおねがいします！", "arekkusu desu. yoroshiku onegaishimasu!", "I'm Alex. Nice to meet you!"], ["はい、アレックスです", "hai, arekkusu desu", "Yes, I'm Alex."]] },
+      { npc: ["どうしてこのクラブに入りたいの？", "doushite kono kurabu ni hairitai no?", "Why do you want to join this club?"],
+        answers: [["アニメが大好きだからです", "anime ga daisuki dakara desu", "Because I love anime."], ["日本語が好きだからです", "nihongo ga suki dakara desu", "Because I like Japanese."]] },
+      { npc: ["いいね！一番好きなアニメは？", "ii ne! ichiban suki na anime wa?", "Nice! What's your favorite anime?"],
+        answers: [["ひみつです", "himitsu desu", "It's a secret."], ["たくさんあります", "takusan arimasu", "There are lots!"]] },
+      { npc: ["明日から練習だよ。がんばろうね！", "ashita kara renshuu da yo. ganbarou ne!", "Practice starts tomorrow. Let's do our best!"],
+        answers: [["はい、先輩！がんばります！", "hai, senpai! ganbarimasu!", "Yes, senpai! I'll do my best!"]] },
+    ],
+    outro: ["ようこそ、仲間！", "youkoso, nakama!", "Welcome, comrade!"],
+  },
 ];
