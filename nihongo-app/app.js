@@ -101,8 +101,115 @@ function askConfirm(message, okLabel = "Yes") {
   });
 }
 
-function isUnlocked(section, idx) {
-  return idx === 0 || !!state.completed[section.lessons[idx - 1].id];
+function isUnlocked(unit, idx) {
+  return idx === 0 || !!state.completed[unit.lessons[idx - 1].id];
+}
+const currentLevel = () => LEVELS.find(l => l.id === state.level) || LEVELS[0];
+const lessonsOf = level => level.units.flatMap(u => u.lessons);
+
+// ---------- AI-written lessons (B1–C2) ----------
+state.aiLessons = state.aiLessons || {};
+
+function applyAiLesson(lesson, data) {
+  lesson.explain = data.explain;
+  lesson.examples = data.examples;
+  lesson.exercises = data.exercises;
+  lesson.items = data.items;
+  lesson.generated = true;
+  registerItems(lesson);
+}
+// Restore lessons generated in earlier visits.
+LEVELS.forEach(l => l.units.forEach(u => u.lessons.forEach(ls => {
+  if (ls.ai && state.aiLessons[ls.id]) applyAiLesson(ls, state.aiLessons[ls.id]);
+})));
+
+function lessonPrompt(lesson) {
+  const level = LEVELS.find(l => l.id === lesson.level);
+  return `You are writing one lesson of a Japanese course for English speakers.
+Level: CEFR ${level.id} (about JLPT ${level.jlpt}, ${level.name}).
+Lesson: "${lesson.title}". Grammar point / skill: ${lesson.point}.
+
+Reply with only one JSON object, in exactly this shape:
+{
+ "explain": "3-5 plain-English sentences: what it means, how to form it (which verb/adjective/noun forms it attaches to), and any nuance or common confusion.",
+ "examples": [{"jp": "Japanese sentence", "romaji": "romaji", "en": "English"}],
+ "vocab": [{"jp": "word as normally written", "kana": "reading in hiragana", "romaji": "romaji", "en": "English"}],
+ "exercises": [
+  {"fill": "Japanese sentence with exactly one ＿ where the target form goes", "options": ["4", "short", "answer", "choices"], "answer": "the one correct option", "en": "English translation of the full sentence"},
+  {"order": ["3 to 8", "tiles", "in the", "correct order"], "en": "English translation"}
+ ]
+}
+Rules:
+- 4 examples, 5 vocab words that appear in the examples, 5 fill exercises and 2 order exercises.
+- Natural, correct Japanese at this level, using the kanji a learner at this level would read.
+- In fill exercises exactly one option is correct; the other three are plausible mistakes (other forms or similar grammar). The ＿ is the full-width character U+FF3F.
+- Order tiles are natural chunks (word + particle may be separate tiles); joined in order they form the full sentence without punctuation.
+- Romaji: Hepburn, lowercase, long vowels as ou / uu.`;
+}
+
+function cleanAiLesson(lesson, raw) {
+  const str = v => (typeof v === "string" ? v.trim() : "");
+  const examples = (raw.examples || []).map(e => [str(e.jp), str(e.romaji), str(e.en)]).filter(e => e[0] && e[2]);
+  const exercises = (raw.exercises || []).map(e => {
+    if (e.fill) {
+      const options = (e.options || []).map(str).filter(Boolean);
+      const answer = str(e.answer);
+      if (!str(e.fill).includes("＿") || options.length < 2 || !options.includes(answer)) return null;
+      return { fill: str(e.fill), options, answer, en: str(e.en) };
+    }
+    if (Array.isArray(e.order)) {
+      const tiles = e.order.map(str).filter(Boolean);
+      return tiles.length >= 3 && tiles.length <= 10 ? { order: tiles, en: str(e.en) } : null;
+    }
+    return null;
+  }).filter(Boolean);
+  const items = (raw.vocab || []).map(v => ({
+    id: `vocab:${str(v.jp)}`, jp: str(v.jp), kana: str(v.kana) !== str(v.jp) ? str(v.kana) : undefined, romaji: str(v.romaji), en: str(v.en),
+  })).filter(v => v.jp && v.romaji && v.en);
+  if (!str(raw.explain) || examples.length < 2 || exercises.length < 3) throw new Error("incomplete");
+  return { explain: str(raw.explain), examples, exercises, items };
+}
+
+async function generateLesson(lesson) {
+  document.body.classList.add("in-lesson");
+  $view.innerHTML = `<div class="lesson done">
+    <div class="emoji">✍️</div>
+    <h2>Writing your lesson…</h2>
+    <p class="muted">${esc(lesson.point)}</p>
+    <p>The AI tutor is preparing explanations, examples and exercises. This takes up to a minute, and only happens once.</p>
+    <div class="spacer"></div>
+    <button class="btn secondary" id="cancelGen">Cancel</button>
+  </div>`;
+  const ctl = new AbortController();
+  document.getElementById("cancelGen").onclick = () => { ctl.abort(); setTab("home"); };
+  const fail = msg => {
+    if (ctl.signal.aborted) return;
+    $view.innerHTML = `<div class="lesson done">
+      <div class="emoji">😕</div><h2>Couldn't write this lesson</h2><p>${esc(msg)}</p>
+      <div class="spacer"></div>
+      <button class="btn" id="retryGen">Try again</button>
+      <button class="btn secondary" id="backGen" style="margin-top:10px">Back</button></div>`;
+    document.getElementById("retryGen").onclick = () => generateLesson(lesson);
+    document.getElementById("backGen").onclick = () => setTab("home");
+  };
+  if (!(await checkAi()) || !sampleFn) {
+    return fail("Lessons from B1 up are written by AI, which needs the online version of the app (opened in claude.ai).");
+  }
+  try {
+    const raw = await sampleFn.json(lessonPrompt(lesson), { signal: ctl.signal, cache: false });
+    const data = cleanAiLesson(lesson, raw);
+    state.aiLessons[lesson.id] = data;
+    applyAiLesson(lesson, data);
+    save();
+    if (!ctl.signal.aborted) startLesson(lesson);
+  } catch (e) {
+    if (e?.code === "cancelled") return;
+    fail({
+      not_granted: "The app needs your permission to use Claude. Reload the page to be asked again.",
+      sampling_disabled: "Claude isn't available on this account.",
+      rate_limited: "You've hit a usage limit. Wait a bit, then try again.",
+    }[e?.code] || "The lesson came back incomplete. Try again.");
+  }
 }
 
 // ---------- Views ----------
@@ -118,38 +225,55 @@ document.getElementById("tabs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (b) setTab(b.dataset.tab);
 });
 
+function nodeFace(lesson, i) {
+  if (state.completed[lesson.id]) return "✓";
+  if (lesson.ai && !lesson.generated) return "✨";
+  if (lesson.type === "kana" || lesson.type === "kanji") return lesson.items[0].jp;
+  if (lesson.type === "grammar") return "文";
+  return "語";
+}
+
 function renderHome() {
   const got = state.daily[today()] || 0;
   const due = dueItems().length;
+  const level = currentLevel();
+  const all = lessonsOf(level);
+  const done = all.filter(l => state.completed[l.id]).length;
   let html = `
-    <div class="card">
-      <b>Daily goal</b> <span class="muted">· ${Math.min(got, DAILY_GOAL)}/${DAILY_GOAL} XP</span>
-      <div class="goal-bar" style="margin-top:8px"><div style="width:${Math.min(100, got / DAILY_GOAL * 100)}%"></div></div>
-      ${due ? `<p style="margin:12px 0 0">🔁 <b>${due}</b> card${due > 1 ? "s" : ""} ready to review.</p>` : ""}
+    <div class="levels" role="tablist">${LEVELS.map(l => `
+      <button class="level-chip ${l.id === level.id ? "active" : ""}" data-level="${l.id}" role="tab" aria-selected="${l.id === level.id}">
+        <b>${l.id}</b><small>${l.jlpt}</small></button>`).join("")}
+    </div>
+    <div class="card level-card">
+      <div><b>${level.id} · ${esc(level.name)}</b> <span class="muted">≈ JLPT ${level.jlpt}</span></div>
+      <div class="muted">${esc(level.desc)}</div>
+      <div class="goal-bar" style="margin-top:10px"><div style="width:${all.length ? done / all.length * 100 : 0}%"></div></div>
+      <div class="muted" style="margin-top:6px;font-size:.85rem">${done}/${all.length} lessons · Daily goal ${Math.min(got, DAILY_GOAL)}/${DAILY_GOAL} XP</div>
+      ${due ? `<p style="margin:10px 0 0">🔁 <b>${due}</b> card${due > 1 ? "s" : ""} ready to review.</p>` : ""}
+      ${level.ai ? `<p class="muted" style="margin:10px 0 0;font-size:.85rem">✨ Lessons at this level are written by AI the first time you open them, then saved on this device. Uses your claude.ai account.</p>` : ""}
     </div>`;
-  COURSE.forEach((section, s) => {
-    const done = section.lessons.filter(l => state.completed[l.id]).length;
+  level.units.forEach((unit, u) => {
+    const udone = unit.lessons.filter(l => state.completed[l.id]).length;
     html += `
       <div class="section-head">
-        <div class="badge" style="background:${section.color}">${section.icon}</div>
-        <div><b>${esc(section.name)}</b><div class="muted">${done}/${section.lessons.length} lessons</div></div>
+        <div class="badge" style="background:${unit.color}">${unit.icon}</div>
+        <div><b>${esc(unit.title)}</b><div class="muted">${udone}/${unit.lessons.length} lessons</div></div>
       </div>
       <div class="path">`;
-    section.lessons.forEach((l, i) => {
-      const unlocked = isUnlocked(section, i);
-      const complete = state.completed[l.id];
-      const face = complete ? "✓" : (l.type === "kana" ? l.items[0].jp : (i + 1));
+    unit.lessons.forEach((l, i) => {
+      const unlocked = isUnlocked(unit, i);
       html += `
-        <button class="node ${unlocked ? "" : "locked"}" data-s="${s}" data-l="${i}" ${unlocked ? "" : "disabled"}>
-          <div class="circle" style="background:${section.color}">${esc(face)}</div>
+        <button class="node ${unlocked ? "" : "locked"}" data-u="${u}" data-l="${i}" ${unlocked ? "" : "disabled"}>
+          <div class="circle" style="background:${unit.color}">${esc(nodeFace(l, i))}</div>
           <div class="label">${esc(l.title)}</div>
         </button>`;
     });
     html += `</div>`;
   });
   $view.innerHTML = html;
+  $view.querySelectorAll("[data-level]").forEach(b => b.onclick = () => { state.level = b.dataset.level; save(); renderHome(); });
   $view.querySelectorAll(".node:not(.locked)").forEach(n =>
-    n.addEventListener("click", () => startLesson(COURSE[n.dataset.s].lessons[n.dataset.l])));
+    n.addEventListener("click", () => startLesson(level.units[n.dataset.u].lessons[n.dataset.l])));
 }
 
 function renderReview() {
@@ -169,9 +293,10 @@ function renderReview() {
 
 let chartScript = "Hiragana";
 function renderChart() {
-  const section = COURSE.find(s => s.name === chartScript);
+  const kanaUnits = LEVELS[0].units.filter(u => u.lessons[0]?.type === "kana");
+  const unit = kanaUnits.find(u => u.title === chartScript) || kanaUnits[0];
   let cells = "";
-  section.lessons.forEach(l => {
+  unit.lessons.forEach(l => {
     const items = l.items;
     // Pad Y and W rows so columns line up with the vowels.
     const layout = items.length === 3 && items[0].romaji === "ya" ? [items[0], null, items[1], null, items[2]]
@@ -185,8 +310,7 @@ function renderChart() {
   $view.innerHTML = `
     <h2>Kana chart</h2>
     <div class="seg">
-      ${COURSE.filter(s => s.lessons[0].type === "kana").map(s =>
-        `<button class="btn ${s.name === chartScript ? "" : "secondary"}" data-script="${s.name}">${s.name}</button>`).join("")}
+      ${kanaUnits.map(u => `<button class="btn ${u === unit ? "" : "secondary"}" data-script="${u.title}">${u.title}</button>`).join("")}
     </div>
     <p class="muted">Tap a character to hear it. Green border = mastered.</p>
     <div class="chart">${cells}</div>`;
@@ -202,7 +326,10 @@ function renderProfile() {
   });
   const max = Math.max(DAILY_GOAL, ...days.map(d => d.xp));
   const cards = Object.values(state.srs);
-  const acc = cards.reduce((a, c) => a + c.seen, 0) ? Math.round(100 * cards.reduce((a, c) => a + c.right, 0) / cards.reduce((a, c) => a + c.seen, 0)) : 0;
+  const seen = cards.reduce((a, c) => a + c.seen, 0);
+  const acc = seen ? Math.round(100 * cards.reduce((a, c) => a + c.right, 0) / seen) : 0;
+  const kanjiKnown = Object.keys(state.srs).filter(id => id.startsWith("kanji:") && mastered(id)).length;
+  const wordsKnown = Object.keys(state.srs).filter(id => id.startsWith("vocab:") && mastered(id)).length;
   $view.innerHTML = `
     <h2>Progress</h2>
     <div class="done-stats">
@@ -215,48 +342,60 @@ function renderProfile() {
         `<div><div class="bar" style="height:${d.xp / max * 80}px"></div>${d.label}</div>`).join("")}</div>
     </div>
     <div class="card">
-      ${COURSE.map(s => `<div class="row-list"><span>${s.icon} ${s.name}</span><b>${s.lessons.flatMap(l => l.items).filter(i => mastered(i.id)).length}/${s.lessons.flatMap(l => l.items).length} mastered</b></div>`).join("")}
-      <div class="row-list"><span>🎯 Accuracy</span><b>${acc}%</b></div>
+      <b>Levels</b>
+      ${LEVELS.map(l => {
+        const all = lessonsOf(l); const done = all.filter(x => state.completed[x.id]).length;
+        return `<div class="row-list"><span>${l.id} · ${esc(l.name)} <span class="muted">(${l.jlpt})</span></span><b>${done}/${all.length}</b></div>`;
+      }).join("")}
+    </div>
+    <div class="card">
+      <div class="row-list"><span>📚 Words mastered</span><b>${wordsKnown}</b></div>
+      <div class="row-list"><span>🈶 Kanji mastered</span><b>${kanjiKnown}</b></div>
+      <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
   document.getElementById("reset").onclick = () => {
     askConfirm("Erase all progress? This can't be undone.", "Erase").then(ok => {
-      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {} }; save(); renderProfile(); }
+      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {}, aiLessons: state.aiLessons }; save(); renderProfile(); }
     });
   };
 }
 
 // ---------- Lessons & quiz engine ----------
 function startLesson(lesson) {
-  startSession({ title: lesson.title, items: lesson.items, lesson, intro: !state.completed[lesson.id] });
+  if (lesson.ai && !lesson.generated) return generateLesson(lesson);
+  startSession({ title: lesson.title, items: lesson.items || [], lesson, intro: !state.completed[lesson.id] || lesson.type === "grammar" });
 }
 
 function makeQuestions(items, perItem) {
   const kinds = ["meaning", "reverse", "listen", "type"];
   const qs = [];
-  items.forEach(it => {
-    sample(kinds, perItem).forEach(kind => qs.push({ item: it, kind }));
-  });
-  return shuffle(qs);
+  items.forEach(it => sample(kinds, perItem).forEach(kind => qs.push({ item: it, kind })));
+  return qs;
 }
 
 function distractors(item, n) {
-  const sameType = Object.values(ALL_ITEMS).filter(i => i.type === item.type && i.id !== item.id
-    && i.id.split(":")[0] === item.id.split(":")[0] && i.romaji !== item.romaji);
-  return sample(sameType, n);
+  const pool = Object.values(ALL_ITEMS).filter(i => i.type === item.type && i.id !== item.id
+    && i.id.split(":")[0] === item.id.split(":")[0] && i.romaji !== item.romaji && i.en !== item.en);
+  return sample(pool, n);
 }
 
 function startSession(opts) {
   document.body.classList.add("in-lesson");
+  const lesson = opts.lesson;
   const items = opts.items.map(i => ALL_ITEMS[i.id] || i);
-  const s = {
-    ...opts, items,
-    step: 0, introIdx: opts.intro ? 0 : -1,
-    queue: makeQuestions(items, opts.review ? 1 : 2),
-    answered: 0, correct: 0, retries: 0,
-  };
+  const isGrammar = lesson?.type === "grammar";
+  const intro = [];
+  if (opts.intro) {
+    if (isGrammar) intro.push({ grammar: lesson });
+    items.forEach(it => intro.push({ item: it }));
+  }
+  const queue = isGrammar
+    ? [...lesson.exercises.map(ex => ({ kind: ex.fill ? "fill" : "order", ex })), ...makeQuestions(items, 1)]
+    : makeQuestions(items, opts.review ? 1 : 2);
+  const s = { ...opts, items, intro, introIdx: 0, queue: shuffle(queue), answered: 0, correct: 0, retries: 0 };
   s.total = s.queue.length;
-  if (s.introIdx === 0) renderIntro(s); else renderQuestion(s);
+  if (intro.length) renderIntro(s); else renderQuestion(s);
 }
 
 function lessonHeader(s, pct) {
@@ -273,41 +412,88 @@ function bindQuit() {
   };
 }
 
-function renderIntro(s) {
-  const it = s.items[s.introIdx];
-  $view.innerHTML = `<div class="lesson">
-    ${lessonHeader(s, (s.introIdx / s.items.length) * 30)}
-    <div class="prompt">New ${it.type === "kana" ? "character" : "word"}</div>
+function itemCardHtml(it) {
+  const kind = { kana: "character", kanji: "kanji" }[it.type] || "word";
+  const sub = it.type === "kanji"
+    ? `<div class="reading">${esc(it.kana)}</div><span class="romaji">${esc(it.romaji)}</span><br><span class="muted">${esc(it.en)}</span>`
+    : `${it.kana ? `<div class="reading">${esc(it.kana)}</div>` : ""}<span class="romaji">${esc(it.romaji)}</span>${it.type !== "kana" ? `<br><span class="muted">${esc(it.en)}</span>` : ""}`;
+  return `<div class="prompt">New ${kind}</div>
     <div class="big ${it.jp.length > 1 ? "word" : ""}">${esc(it.jp)}</div>
-    <button class="speak" id="say" aria-label="Play audio">🔊</button>
-    <p class="intro-meta"><span class="romaji">${esc(it.romaji)}</span>${it.type === "vocab" ? `<br><span class="muted">${esc(it.en)}</span>` : ""}</p>
+    <button class="speak" data-say="${esc(it.kana ? it.kana.split("・")[0] : it.jp)}" aria-label="Play audio">🔊</button>
+    <div class="intro-meta">${sub}</div>`;
+}
+
+function grammarCardHtml(lesson) {
+  return `<div class="prompt">${esc(lesson.title)}</div>
+    <div class="point">${esc(lesson.point)}</div>
+    <p class="explain">${esc(lesson.explain)}</p>
+    <div class="examples">${lesson.examples.map(([jp, romaji, en]) => `
+      <button class="example" data-say="${esc(jp)}">
+        <span class="ex-jp">🔊 ${esc(jp)}</span><span class="ex-ro">${esc(romaji)}</span><span class="ex-en">${esc(en)}</span>
+      </button>`).join("")}</div>`;
+}
+
+function renderIntro(s) {
+  const card = s.intro[s.introIdx];
+  const last = s.introIdx === s.intro.length - 1;
+  $view.innerHTML = `<div class="lesson">
+    ${lessonHeader(s, (s.introIdx / s.intro.length) * 30)}
+    ${card.grammar ? grammarCardHtml(card.grammar) : itemCardHtml(card.item)}
     <div class="spacer"></div>
-    <button class="btn" id="next">${s.introIdx === s.items.length - 1 ? "Start practice" : "Next"}</button>
+    <button class="btn" id="next">${last ? "Start practice" : "Next"}</button>
   </div>`;
   bindQuit();
-  speak(it.jp);
-  document.getElementById("say").onclick = () => speak(it.jp);
+  $view.querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(b.dataset.say));
+  if (card.item) speak(card.item.kana ? card.item.kana.split("・")[0] : card.item.jp);
   document.getElementById("next").onclick = () => {
     s.introIdx++;
-    if (s.introIdx < s.items.length) renderIntro(s); else renderQuestion(s);
+    if (s.introIdx < s.intro.length) renderIntro(s); else renderQuestion(s);
   };
 }
+
+// Accept any of the readings listed as "a / b".
+const romajiMatches = (typed, romaji) => romaji.split("/").some(r => normalize(r) === normalize(typed));
 
 function renderQuestion(s) {
   if (!s.queue.length) return finishSession(s);
   const q = s.queue[0];
   const it = q.item;
-  const isKana = it.type === "kana";
-  const base = s.intro ? 30 : 0;
+  const base = s.intro.length ? 30 : 0;
   const pct = base + (s.answered / (s.total + s.retries)) * (100 - base);
-  let body = "", answerCheck;
+  let body = "", answerCheck, answerText, sayAfter, rightId;
 
-  if (q.kind === "type") {
-    body = `<div class="prompt">Type the romaji</div>
+  if (q.kind === "fill") {
+    const ex = q.ex;
+    const opts = shuffle(ex.options);
+    body = `<div class="prompt">Fill in the blank</div>
+      <div class="sentence">${esc(ex.fill).replace("＿", '<span class="blank">＿＿</span>')}</div>
+      ${ex.en ? `<p class="muted">${esc(ex.en)}</p>` : ""}
+      <div class="choices">${opts.map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    rightId = ex.answer;
+    answerCheck = () => s.selected === ex.answer;
+    answerText = ex.fill.replace("＿", ex.answer).replace(/\(.*?\)|（.*?）/g, "").trim();
+    sayAfter = answerText;
+  } else if (q.kind === "order") {
+    const ex = q.ex;
+    s.picked = [];
+    let pool = shuffle(ex.order.map((t, i) => ({ t, i })));
+    if (pool.every((p, i) => p.i === i) && pool.length > 1) pool = [...pool.slice(1), pool[0]];
+    s.pool = pool;
+    body = `<div class="prompt">Build the sentence</div>
+      <p class="muted">${esc(ex.en)}</p>
+      <div class="answer-line" id="line"></div>
+      <div class="tiles" id="pool"></div>`;
+    answerCheck = () => s.picked.map(p => p.t).join("") === ex.order.join("");
+    answerText = ex.order.join("");
+    sayAfter = answerText;
+  } else if (q.kind === "type") {
+    const isKanji = it.type === "kanji";
+    body = `<div class="prompt">${isKanji ? "Type a reading in romaji" : "Type the romaji"}</div>
       <div class="big ${it.jp.length > 1 ? "word" : ""}">${esc(it.jp)}</div>
-      <input class="type-input" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. ${isKana ? "ka" : "neko"}">`;
-    answerCheck = () => normalize(document.getElementById("ans").value) === normalize(it.romaji);
+      <input class="type-input" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${isKanji ? "e.g. yama" : "e.g. neko"}">`;
+    answerCheck = () => romajiMatches(document.getElementById("ans").value, it.romaji);
   } else {
+    const isKana = it.type === "kana";
     const opts = shuffle([it, ...distractors(it, 3)]);
     let prompt, show, label;
     if (q.kind === "meaning") {
@@ -315,7 +501,7 @@ function renderQuestion(s) {
       show = `<div class="big ${it.jp.length > 1 ? "word" : ""}">${esc(it.jp)}</div>`;
       label = o => isKana ? o.romaji : o.en;
     } else if (q.kind === "reverse") {
-      prompt = isKana ? `Which one is “${esc(it.romaji)}”?` : `How do you say “${esc(it.en)}”?`;
+      prompt = isKana ? `Which one is “${esc(it.romaji)}”?` : `Which one means “${esc(it.en)}”?`;
       show = "";
       label = o => o.jp;
     } else {
@@ -325,7 +511,13 @@ function renderQuestion(s) {
     }
     body = `<div class="prompt">${prompt}</div>${show}
       <div class="choices">${opts.map(o => `<button class="choice" data-id="${esc(o.id)}">${esc(label(o))}</button>`).join("")}</div>`;
+    rightId = it.id;
     answerCheck = () => s.selected === it.id;
+  }
+  if (it) {
+    answerText = it.type === "kana" ? `${it.jp} = ${it.romaji}`
+      : `${it.jp}${it.kana ? ` (${it.kana})` : ""} · ${it.romaji} = ${it.en}`;
+    sayAfter = it.kana ? it.kana.split("・")[0] : it.jp;
   }
 
   $view.innerHTML = `<div class="lesson">
@@ -339,12 +531,28 @@ function renderQuestion(s) {
   const check = document.getElementById("check");
   s.selected = null;
 
-  if (q.kind === "listen") { speak(it.jp); document.getElementById("say").onclick = () => speak(it.jp); }
+  if (q.kind === "listen") { speak(sayAfter); document.getElementById("say").onclick = () => speak(sayAfter); }
   if (q.kind === "type") {
     const input = document.getElementById("ans");
     input.focus();
     input.oninput = () => (check.disabled = !input.value.trim());
     input.onkeydown = e => { if (e.key === "Enter" && !check.disabled) check.click(); };
+  }
+  if (q.kind === "order") {
+    const drawTiles = () => {
+      const line = document.getElementById("line"), pool = document.getElementById("pool");
+      line.innerHTML = s.picked.map((p, i) => `<button class="tile" data-from="line" data-i="${i}">${esc(p.t)}</button>`).join("");
+      pool.innerHTML = s.pool.map((p, i) => `<button class="tile" data-from="pool" data-i="${i}">${esc(p.t)}</button>`).join("");
+      check.disabled = s.pool.length > 0;
+      $view.querySelectorAll(".tile").forEach(b => b.onclick = () => {
+        if (check.dataset.done) return;
+        const i = Number(b.dataset.i);
+        if (b.dataset.from === "pool") s.picked.push(...s.pool.splice(i, 1));
+        else s.pool.push(...s.picked.splice(i, 1));
+        drawTiles();
+      });
+    };
+    drawTiles();
   }
   $view.querySelectorAll(".choice").forEach(c => c.onclick = () => {
     if (check.dataset.done) return;
@@ -357,19 +565,19 @@ function renderQuestion(s) {
     const ok = answerCheck();
     check.dataset.done = "1";
     s.answered++;
-    grade(it.id, ok);
+    if (it) grade(it.id, ok);
     if (ok) s.correct++;
     else if (!q.retry) { s.retries++; s.queue.push({ ...q, retry: true }); } // retry once at the end
     $view.querySelectorAll(".choice").forEach(c => {
-      if (c.dataset.id === it.id) c.classList.add("right");
+      if (c.dataset.id === rightId) c.classList.add("right");
       else if (c.dataset.id === s.selected) c.classList.add("wrong");
     });
-    const answer = isKana ? `${it.jp} = ${it.romaji}` : `${it.jp} (${it.romaji}) = ${it.en}`;
     document.getElementById("fb").innerHTML = ok
-      ? `<div class="feedback ok">✓ Nice! <span style="font-weight:400">${esc(answer)}</span></div>`
-      : `<div class="feedback bad">✗ Correct answer: <span style="font-weight:400">${esc(answer)}</span></div>`;
-    if (q.kind !== "listen") speak(it.jp);
+      ? `<div class="feedback ok">✓ Nice! <span style="font-weight:400">${esc(answerText)}</span></div>`
+      : `<div class="feedback bad">✗ Correct answer: <span style="font-weight:400">${esc(answerText)}</span></div>`;
+    if (q.kind !== "listen") speak(sayAfter);
     check.textContent = "Continue";
+    check.disabled = false;
     check.focus();
   };
 }

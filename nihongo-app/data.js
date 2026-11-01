@@ -1,5 +1,6 @@
-// Course content for Nihongo Path.
-// Each kana row becomes one lesson; vocab is grouped into themed units.
+// Shared course helpers + kana tables for Nihongo Path.
+// Level content lives in course-a1.js, course-a2.js and course-advanced.js;
+// levels.js assembles everything into LEVELS and ALL_ITEMS.
 
 const HIRAGANA_ROWS = [
   ["Vowels", "あいうえお", "a i u e o"],
@@ -27,90 +28,36 @@ const KATAKANA_ROWS = [
   ["W-row + ン", "ワヲン", "wa wo n"],
 ];
 
-// [japanese, reading (romaji), english]
-const VOCAB_UNITS = [
-  ["Greetings", "👋", [
-    ["こんにちは", "konnichiwa", "hello"],
-    ["おはよう", "ohayou", "good morning"],
-    ["こんばんは", "konbanwa", "good evening"],
-    ["ありがとう", "arigatou", "thank you"],
-    ["すみません", "sumimasen", "excuse me / sorry"],
-    ["さようなら", "sayounara", "goodbye"],
-  ]],
-  ["Numbers", "🔢", [
-    ["いち", "ichi", "one"],
-    ["に", "ni", "two"],
-    ["さん", "san", "three"],
-    ["よん", "yon", "four"],
-    ["ご", "go", "five"],
-    ["ろく", "roku", "six"],
-    ["なな", "nana", "seven"],
-    ["はち", "hachi", "eight"],
-    ["きゅう", "kyuu", "nine"],
-    ["じゅう", "juu", "ten"],
-  ]],
-  ["Food & Drink", "🍙", [
-    ["みず", "mizu", "water"],
-    ["おちゃ", "ocha", "green tea"],
-    ["ごはん", "gohan", "rice / meal"],
-    ["さかな", "sakana", "fish"],
-    ["たまご", "tamago", "egg"],
-    ["コーヒー", "koohii", "coffee"],
-    ["パン", "pan", "bread"],
-  ]],
-  ["People", "🧑", [
-    ["わたし", "watashi", "I / me"],
-    ["あなた", "anata", "you"],
-    ["ともだち", "tomodachi", "friend"],
-    ["せんせい", "sensei", "teacher"],
-    ["がくせい", "gakusei", "student"],
-    ["かぞく", "kazoku", "family"],
-  ]],
-  ["Nature", "🌸", [
-    ["さくら", "sakura", "cherry blossom"],
-    ["やま", "yama", "mountain"],
-    ["かわ", "kawa", "river"],
-    ["そら", "sora", "sky"],
-    ["あめ", "ame", "rain"],
-    ["ねこ", "neko", "cat"],
-    ["いぬ", "inu", "dog"],
-  ]],
-  ["Useful Phrases", "💬", [
-    ["はい", "hai", "yes"],
-    ["いいえ", "iie", "no"],
-    ["おいしい", "oishii", "delicious"],
-    ["わかりました", "wakarimashita", "understood"],
-    ["いくらですか", "ikura desu ka", "how much is it?"],
-    ["トイレはどこですか", "toire wa doko desu ka", "where is the toilet?"],
-  ]],
-];
-
-function kanaItems(rows, script) {
+function kanaLessons(rows, script) {
   return rows.map(([title, chars, romaji], i) => {
     const r = romaji.split(" ");
     return {
-      id: `${script}-${i}`,
-      title,
-      type: "kana",
+      id: `${script}-${i}`, title, type: "kana",
       items: [...chars].map((c, j) => ({ id: `${script}:${c}`, jp: c, romaji: r[j], en: r[j] })),
     };
   });
 }
 
-const COURSE = [
-  { name: "Hiragana", icon: "あ", color: "#ff7aa2", lessons: kanaItems(HIRAGANA_ROWS, "hira") },
-  { name: "Katakana", icon: "ア", color: "#7a9cff", lessons: kanaItems(KATAKANA_ROWS, "kata") },
-  {
-    name: "First Words", icon: "語", color: "#4fc3a1",
-    lessons: VOCAB_UNITS.map(([title, emoji, words], i) => ({
-      id: `vocab-${i}`,
-      title: `${emoji} ${title}`,
-      type: "vocab",
-      items: words.map(([jp, romaji, en]) => ({ id: `vocab:${jp}`, jp, romaji, en })),
-    })),
-  },
-];
+// words: [written form, romaji, english, kana reading (only when written form has kanji)]
+function vocabLesson(id, title, words) {
+  return {
+    id, title, type: "vocab",
+    items: words.map(([jp, romaji, en, kana]) => ({ id: `vocab:${jp}`, jp, romaji, en, kana })),
+  };
+}
 
-const ALL_ITEMS = Object.fromEntries(
-  COURSE.flatMap(s => s.lessons.flatMap(l => l.items.map(it => [it.id, { ...it, type: l.type }])))
-);
+// chars: [kanji, readings in kana, readings in romaji ("a / b"), meaning]
+function kanjiLesson(id, title, chars) {
+  return {
+    id, title, type: "kanji",
+    items: chars.map(([jp, kana, romaji, en]) => ({ id: `kanji:${jp}`, jp, kana, romaji, en })),
+  };
+}
+
+// A grammar lesson: explanation, example sentences, then exercises.
+//  examples:  [jp, romaji, en]
+//  exercises: { fill: "sentence with ＿", options: [...], answer, en }
+//          or { order: ["tile", "tile", ...] (correct order), en }
+function grammarLesson(id, title, point, explain, examples, exercises) {
+  return { id, title, type: "grammar", point, explain, examples, exercises };
+}

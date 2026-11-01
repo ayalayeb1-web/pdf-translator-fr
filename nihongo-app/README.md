@@ -3,13 +3,25 @@
 A small, offline-friendly web app for learning Japanese. It's plain HTML, CSS and JS, with no build step and no dependencies.
 
 ## Features
-- **Lesson path**: Hiragana (10 lessons), Katakana (10 lessons) and First Words vocab (6 themed units). Each lesson unlocks the next.
-- **Lesson flow**: new characters or words are introduced first, then mixed practice:
-  - multiple choice (sound or meaning)
-  - reverse (pick the Japanese)
-  - listening (🔊, then pick what you heard)
-  - typing the romaji
-  Missed questions come back once at the end.
+- **Levels A1 → C2**, mapped to the JLPT:
+
+  | Level | JLPT | Content |
+  |---|---|---|
+  | A1 | N5 | Kana, first kanji, introductions, shopping. Hand-written: 10 units, 49 lessons. |
+  | A2 | N4 | Te-form, wants and abilities, experiences, casual speech. Hand-written: 6 units, 18 lessons. |
+  | B1 | N3 | Passive and causative, conditionals, hearsay. 20 lessons, AI-written. |
+  | B2 | N2 | Formal connectors, news and business Japanese. 16 lessons, AI-written. |
+  | C1 | N1 | Written style and literary grammar. 12 lessons, AI-written. |
+  | C2 | N1+ | Keigo, classical forms, idioms, dialects. 12 lessons, AI-written. |
+
+  You can jump to any level. Inside a unit, lessons unlock in order.
+- **Lesson types:**
+  - kana
+  - vocabulary, written with kanji and the kana reading
+  - kanji (meanings and readings)
+  - grammar: an explanation, examples you can tap to hear, then *fill in the blank* and *build the sentence* exercises
+- **AI-written lessons (B1–C2)**: the course outline in `course-advanced.js` lists the real grammar points. The first time you open a lesson, it is generated with Claude through the claude.ai artifact `sample` capability, which uses the viewer's own account. It is then validated and saved on the device.
+- **Quiz types**: multiple choice in both directions, listening, typing romaji (any listed kanji reading is accepted), fill in the blank, and sentence building. Missed questions come back once at the end.
 - **Spaced repetition review**: a Leitner-box system (1, 2, 4, 8, 16, 32 days) schedules each card.
 - **🗣️ Speak (free)**: role-play real situations out loud: a café, introducing yourself, asking directions, a restaurant and a convenience store.
   - The partner speaks first. You answer with the 🎤 or by typing romaji or Japanese, and the app scores how close you were.
@@ -45,10 +57,13 @@ Then open http://localhost:8000. A "Chat with AI" button appears under each scen
 - The server keeps your key private. The browser never sees it.
 
 ## Add content
-All course content lives in `data.js`. Add rows to `HIRAGANA_ROWS` / `KATAKANA_ROWS`, or add a unit to `VOCAB_UNITS`:
+Course files: `data.js` (helpers and kana), `course-a1.js`, `course-a2.js`, `course-advanced.js` (B1–C2 outline) and `levels.js` (assembly). Add a lesson to a unit in `course-a1.js` / `course-a2.js` with the helpers:
 
 ```js
-["Colors", "🎨", [["あか", "aka", "red"], ["あお", "ao", "blue"]]],
+vocabLesson("a1-colors", "Colors", [["赤", "aka", "red", "あか"], ["青", "ao", "blue", "あお"]]),
+grammarLesson("a1-mo", "Also", "〜も", "も replaces は/が to mean \"also\".",
+  [["わたしも学生です。", "watashi mo gakusei desu.", "I'm a student too."]],
+  [{ fill: "わたし＿学生です。", options: ["も", "を", "に", "で"], answer: "も", en: "I'm a student too." }]),
 ```
 
 Role-play scenarios live in `speak-data.js`. Each turn has the partner's line and one or more accepted answers.
