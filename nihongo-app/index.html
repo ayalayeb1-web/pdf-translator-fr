@@ -6,11 +6,13 @@
   <meta name="theme-color" content="#ff7aa2">
   <title>Nihongo Path</title>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">🌸 Nihongo Path</div>
+    <div class="brand"><span class="brand-mark">道</span>Nihongo Path</div>
     <div class="stats">
       <span title="Day streak">🔥 <b id="streak">0</b></span>
       <span title="Total XP">⭐ <b id="xp">0</b></span>
@@ -20,6 +22,7 @@
   <main id="view"></main>
 
   <nav class="tabs" id="tabs">
+    <span class="tab-ink" aria-hidden="true"></span>
     <button data-tab="home" class="active"><span>🏠</span>Learn</button>
     <button data-tab="speak"><span>🗣️</span>Speak</button>
     <button data-tab="review"><span>🔁</span>Review</button>
@@ -43,5 +46,6 @@
   <script src="writing.js"></script>
   <script src="notes.js"></script>
   <script src="placement.js"></script>
+  <script src="journey.js"></script>
 </body>
 </html>

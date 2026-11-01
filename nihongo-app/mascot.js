@@ -91,6 +91,15 @@ const Mascot = (() => {
     o.connect(g).connect(ctx.destination);
     o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur);
   }
+  function whoosh() {
+    ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+    const len = ctx.sampleRate * 0.6, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / len);
+    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = buf; f.type = "bandpass"; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(400, ctx.currentTime); f.frequency.exponentialRampToValueAtTime(2400, ctx.currentTime + 0.5);
+    g.gain.value = 0.18; src.connect(f).connect(g).connect(ctx.destination); src.start();
+  }
   function sfx(kind) {
     if (state.sfx === false) return;
     try {
@@ -99,6 +108,7 @@ const Mascot = (() => {
       else if (kind === "wrong") { tone(220, 0, .2, "triangle", .15); tone(185, .12, .25, "triangle", .15); }
       else if (kind === "finish") { [523, 659, 784, 1046, 1318].forEach((f, i) => tone(f, i * .09, .25)); }
       else if (kind === "tap") tone(1200, 0, .06, "sine", .08);
+      else if (kind === "whoosh") whoosh();
     } catch (_) { /* audio unavailable */ }
   }
 

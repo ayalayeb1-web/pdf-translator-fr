@@ -44,7 +44,7 @@ function startPlacement() {
       <div class="lesson-top"><button class="icon-btn" id="quit" aria-label="Quit">✕</button>
         <div class="progress"><div style="width:${n / 18 * 100}%"></div></div><span class="muted">${lvl}</span></div>
       <div class="prompt">${esc(q.q).replace("＿", '<span class="blank">＿＿</span>')}</div>
-      <div class="choices one-col">${shuffle(q.options).map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>
+      <div class="choices one-col stagger">${shuffle(q.options).map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>
       <button class="chip-btn" id="dunno">I don't know</button>
       <div class="spacer"></div>
     </div>`;

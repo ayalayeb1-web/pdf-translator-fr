@@ -22,6 +22,16 @@ A small, offline-friendly web app for learning Japanese. It's plain HTML, CSS an
   - grammar: an explanation, examples you can tap to hear, then *fill in the blank* and *build the sentence* exercises
 - **AI-written lessons (B1–C2)**: the course outline in `course-advanced.js` lists the real grammar points. The first time you open a lesson, it is generated with Claude through the claude.ai artifact `sample` capability, which uses the viewer's own account. It is then validated and saved on the device.
 - **Quiz types**: multiple choice in both directions, listening, typing romaji (any listed kanji reading is accepted), fill in the blank, and sentence building. Missed questions come back once at the end.
+- **🗾 Journey map**: the Learn tab is a winding road across six regions, one per level, each with its own season and scenery:
+  - A1: Sakura Village
+  - A2: Festival Coast
+  - B1: Maple Mountains
+  - B2: Neon City
+  - C1: Ancient Capital
+  - C2: Fuji Summit
+
+  The scenery scrolls at a different speed for depth, and petals, fireflies, leaves or snow drift across the screen. Kitsu flies along the road to your next lesson, and switching regions plays a fly-through-the-clouds transition. Tapping a lesson opens a preview sheet.
+- **Motion**: screens slide into each other, choices float in one after another, feedback slides up, the tab indicator glides and buttons have a springy feel. "Reduce motion" turns all of this off.
 - **🦊 Kitsu the mascot**: an original fox-spirit guide.
   - She greets you, reacts to every answer and celebrates combos and finished lessons with confetti.
   - She speaks Japanese out loud, with English below.

@@ -16,6 +16,7 @@ for (const s of scripts) if (read(s).includes("</script")) throw new Error(`${s}
 
 fs.writeFileSync(out, `<title>Nihongo Path</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <style>
 ${read("styles.css")}
 </style>

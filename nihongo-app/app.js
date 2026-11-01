@@ -231,94 +231,44 @@ async function generateLesson(lesson) {
 
 // ---------- Views ----------
 let currentTab = "home";
+const TAB_ORDER = ["home", "speak", "review", "chart", "notes", "profile"];
+
+// Smoothly swap what's on screen: slide/fade the old view out, render, slide the new one in.
+let swapToken = 0;
+function swapView(render, dir = 1) {
+  const token = ++swapToken;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finish = () => {
+    if (token !== swapToken) return;
+    render();
+    $view.querySelectorAll(".stagger").forEach(el => [...el.children].forEach((c, i) => c.style.setProperty("--i", i)));
+    if (!reduce && $view.animate) $view.animate(
+      [{ opacity: 0, transform: `translateX(${28 * dir}px) scale(.985)` }, { opacity: 1, transform: "none" }],
+      { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" });
+  };
+  if (reduce || !$view.animate || !$view.firstElementChild) return finish();
+  const out = $view.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${-22 * dir}px) scale(.99)` }],
+    { duration: 150, easing: "ease-in", fill: "forwards" });
+  out.onfinish = () => { finish(); out.cancel(); };
+}
+
+function moveTabInk() {
+  const active = document.querySelector("#tabs button.active"), ink = document.querySelector(".tab-ink");
+  if (active && ink) { ink.style.width = active.offsetWidth - 12 + "px"; ink.style.transform = `translateX(${active.offsetLeft + 6}px)`; }
+}
 function setTab(tab) {
+  const dir = TAB_ORDER.indexOf(tab) >= TAB_ORDER.indexOf(currentTab) ? 1 : -1;
   currentTab = tab;
+  if (typeof stopAmbient === "function") stopAmbient();
   document.body.classList.remove("in-lesson");
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  VIEWS[tab]();
-  $view.scrollTop = 0;
+  moveTabInk();
+  swapView(() => { $view.scrollTop = 0; VIEWS[tab](); }, dir);
 }
+window.addEventListener("resize", moveTabInk);
 document.getElementById("tabs").addEventListener("click", e => {
   const b = e.target.closest("button"); if (b) setTab(b.dataset.tab);
 });
-
-function nodeFace(lesson, i) {
-  if (state.completed[lesson.id]) return "✓";
-  if (lesson.ai && !lesson.generated) return "✨";
-  if (lesson.type === "kana" || lesson.type === "kanji") return lesson.items[0].jp;
-  if (lesson.type === "grammar") return "文";
-  return "語";
-}
-
-function renderHome() {
-  const got = state.daily[today()] || 0;
-  const due = dueItems().length;
-  const level = currentLevel();
-  const all = lessonsOf(level);
-  const done = all.filter(l => state.completed[l.id]).length;
-  const wotd = wordOfTheDay();
-  const nothingDone = !Object.keys(state.completed).length;
-  let html = `
-    ${Mascot.homeCard()}
-    ${!state.placement && nothingDone ? `<button class="btn" id="placeBtn" style="margin-bottom:14px">🎯 Find my level (2 min)</button>` : ""}
-    <div class="levels" role="tablist">${LEVELS.map(l => `
-      <button class="level-chip ${l.id === level.id ? "active" : ""}" data-level="${l.id}" role="tab" aria-selected="${l.id === level.id}">
-        <b>${l.id}</b><small>${l.jlpt}</small></button>`).join("")}
-    </div>
-    <div class="card level-card">
-      <div><b>${level.id} · ${esc(level.name)}</b> <span class="muted">≈ JLPT ${level.jlpt}</span></div>
-      <div class="muted">${esc(level.desc)}</div>
-      <div class="goal-bar" style="margin-top:10px"><div style="width:${all.length ? done / all.length * 100 : 0}%"></div></div>
-      <div class="muted" style="margin-top:6px;font-size:.85rem">${done}/${all.length} lessons · Daily goal ${Math.min(got, DAILY_GOAL)}/${DAILY_GOAL} XP</div>
-      ${due ? `<p style="margin:10px 0 0">🔁 <b>${due}</b> card${due > 1 ? "s" : ""} ready to review.</p>` : ""}
-      ${level.ai ? `<p class="muted" style="margin:10px 0 0;font-size:.85rem">✨ Lessons at this level are written by AI the first time you open them, then saved on this device. Uses your claude.ai account.</p>` : ""}
-      <div class="level-links">
-        ${videoLink(`learn Japanese JLPT ${level.jlpt} lesson`, `${level.jlpt} video lessons`)}
-        ${videoLink(`Japanese listening practice JLPT ${level.jlpt}`, "Listening practice")}
-        ${videoLink(`learn Japanese with anime ${level.jlpt}`, "Learn with anime")}
-        ${state.placement || !nothingDone ? `<button class="chip-btn" id="placeBtn">🎯 Retake level test</button>` : ""}
-      </div>
-    </div>
-    ${wotd ? `<div class="card wotd">
-      <div class="w-meta"><div class="muted" style="font-size:.75rem;font-weight:800;letter-spacing:.06em">WORD OF THE DAY</div>
-        <div class="w-jp">${esc(wotd.jp)}</div>
-        <div class="muted">${wotd.kana ? esc(wotd.kana) + " · " : ""}${esc(wotd.romaji)} — ${esc(wotd.en)}</div></div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <button class="speak small" id="wotdSay" aria-label="Play">🔊</button>
-        <button class="chip-btn" id="wotdAdd">${state.srs[wotd.id] ? "✓ In review" : "+ Review"}</button>
-      </div></div>` : ""}`;
-  level.units.forEach((unit, u) => {
-    const udone = unit.lessons.filter(l => state.completed[l.id]).length;
-    html += `
-      <div class="section-head">
-        <div class="badge" style="background:${unit.color}">${unit.icon}</div>
-        <div><b>${esc(unit.title)}</b><div class="muted">${udone}/${unit.lessons.length} lessons</div></div>
-      </div>
-      <div class="path">`;
-    unit.lessons.forEach((l, i) => {
-      const unlocked = isUnlocked(unit, i);
-      html += `
-        <button class="node ${unlocked ? "" : "locked"}" data-u="${u}" data-l="${i}" ${unlocked ? "" : "disabled"}>
-          <div class="circle" style="background:${unit.color}">${esc(nodeFace(l, i))}</div>
-          <div class="label">${esc(l.title)}</div>
-        </button>`;
-    });
-    html += `</div>`;
-  });
-  $view.innerHTML = html;
-  Mascot.bindTap($view);
-  document.getElementById("placeBtn")?.addEventListener("click", startPlacement);
-  if (wotd) {
-    document.getElementById("wotdSay").onclick = () => speak(wotd.kana || wotd.jp);
-    document.getElementById("wotdAdd").onclick = () => {
-      if (!state.srs[wotd.id]) { state.srs[wotd.id] = { box: 0, due: Date.now(), seen: 0, right: 0 }; save(); toast("Added to your review deck"); }
-      renderHome();
-    };
-  }
-  $view.querySelectorAll("[data-level]").forEach(b => b.onclick = () => { state.level = b.dataset.level; save(); renderHome(); });
-  $view.querySelectorAll(".node:not(.locked)").forEach(n =>
-    n.addEventListener("click", () => startLesson(level.units[n.dataset.u].lessons[n.dataset.l])));
-}
 
 function renderReview() {
   const due = dueItems();
@@ -450,6 +400,7 @@ function distractors(item, n) {
 
 function startSession(opts) {
   document.body.classList.add("in-lesson");
+  if (typeof stopAmbient === "function") stopAmbient();
   const lesson = opts.lesson;
   const items = opts.items.map(i => ALL_ITEMS[i.id] || i);
   const isGrammar = lesson?.type === "grammar";
@@ -465,7 +416,7 @@ function startSession(opts) {
     : makeQuestions(items, opts.review ? 1 : 2);
   const s = { ...opts, items, intro, introIdx: 0, queue: isReading ? queue : shuffle(queue), answered: 0, correct: 0, retries: 0, combo: 0, bestCombo: 0 };
   s.total = s.queue.length;
-  if (intro.length) renderIntro(s); else renderQuestion(s);
+  swapView(() => (intro.length ? renderIntro(s) : renderQuestion(s)));
 }
 
 function lessonHeader(s, pct) {
@@ -525,7 +476,7 @@ function grammarCardHtml(lesson) {
     <div class="point">${esc(lesson.point)}</div>
     <div>${videoLink(`Japanese grammar ${lesson.point.split(/[ /]/)[0]} explained`, "Video lessons on this grammar")}</div>
     <p class="explain">${esc(lesson.explain)}</p>
-    <div class="examples">${lesson.examples.map(([jp, romaji, en]) => `
+    <div class="examples stagger">${lesson.examples.map(([jp, romaji, en]) => `
       <button class="example" data-say="${esc(jp)}">
         <span class="ex-jp">🔊 ${esc(jp)}</span><span class="ex-ro">${esc(romaji)}</span><span class="ex-en">${esc(en)}</span>
       </button>`).join("")}</div>`;
@@ -561,7 +512,7 @@ function renderIntro(s) {
   if (card.item) speak(card.item.kana ? card.item.kana.split("・")[0] : card.item.jp);
   document.getElementById("next").onclick = () => {
     s.introIdx++;
-    if (s.introIdx < s.intro.length) renderIntro(s); else renderQuestion(s);
+    swapView(() => (s.introIdx < s.intro.length ? renderIntro(s) : renderQuestion(s)));
   };
 }
 
@@ -581,7 +532,7 @@ function renderQuestion(s) {
     body = `<div class="prompt">${esc(ex.q)}</div>
       <button class="chip-btn" id="rereadBtn" style="margin-bottom:6px">📖 Show the text</button>
       <div class="passage small" id="reread" hidden>${s.lesson.tokens.map(t => esc(t.t)).join("")}</div>
-      <div class="choices one-col">${shuffle(ex.options).map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+      <div class="choices one-col stagger">${shuffle(ex.options).map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
     rightId = ex.answer;
     answerCheck = () => s.selected === ex.answer;
     answerText = ex.answer;
@@ -591,7 +542,7 @@ function renderQuestion(s) {
     body = `<div class="prompt">Fill in the blank</div>
       <div class="sentence">${esc(ex.fill).replace("＿", '<span class="blank">＿＿</span>')}</div>
       ${ex.en ? `<p class="muted">${esc(ex.en)}</p>` : ""}
-      <div class="choices">${opts.map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+      <div class="choices stagger">${opts.map(o => `<button class="choice" data-id="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
     rightId = ex.answer;
     answerCheck = () => s.selected === ex.answer;
     answerText = ex.fill.replace("＿", ex.answer).replace(/\(.*?\)|（.*?）/g, "").trim();
@@ -605,7 +556,7 @@ function renderQuestion(s) {
     body = `<div class="prompt">Build the sentence</div>
       <p class="muted">${esc(ex.en)}</p>
       <div class="answer-line" id="line"></div>
-      <div class="tiles" id="pool"></div>`;
+      <div class="tiles stagger" id="pool"></div>`;
     answerCheck = () => s.picked.map(p => p.t).join("") === ex.order.join("");
     answerText = ex.order.join("");
     sayAfter = answerText;
@@ -633,7 +584,7 @@ function renderQuestion(s) {
       label = o => o.jp;
     }
     body = `<div class="prompt">${prompt}</div>${show}
-      <div class="choices">${opts.map(o => `<button class="choice" data-id="${esc(o.id)}">${esc(label(o))}</button>`).join("")}</div>`;
+      <div class="choices stagger">${opts.map(o => `<button class="choice" data-id="${esc(o.id)}">${esc(label(o))}</button>`).join("")}</div>`;
     rightId = it.id;
     answerCheck = () => s.selected === it.id;
   }
@@ -686,7 +637,7 @@ function renderQuestion(s) {
   });
 
   check.onclick = () => {
-    if (check.dataset.done) { s.queue.shift(); return renderQuestion(s); }
+    if (check.dataset.done) { s.queue.shift(); return swapView(() => renderQuestion(s)); }
     const ok = answerCheck();
     check.dataset.done = "1";
     s.answered++;
@@ -733,5 +684,5 @@ function finishSession(s) {
 
 // ---------- Boot ----------
 // Other scripts (e.g. speak.js) can register extra tabs in VIEWS before boot.
-const VIEWS = { home: renderHome, review: renderReview, chart: renderChart, profile: renderProfile };
-window.addEventListener("DOMContentLoaded", () => { save(); setTab("home"); });
+const VIEWS = { review: renderReview, chart: renderChart, profile: renderProfile }; // home: journey.js
+window.addEventListener("DOMContentLoaded", () => { save(); setTab("home"); setTimeout(moveTabInk, 50); });
