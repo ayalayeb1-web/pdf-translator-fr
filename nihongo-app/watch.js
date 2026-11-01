@@ -403,7 +403,7 @@ function renderVideoQuiz(id, stage, rec) {
     const qv = stage.querySelector("#qv"), body = stage.querySelector("#qbody"), go = stage.querySelector("#qgo"), fb = stage.querySelector("#qfb");
     let sel = null, done = false;
     const choose = opts => {
-      body.querySelectorAll(".choice").forEach(c => c.onclick = () => { if (done) return; body.querySelectorAll(".choice").forEach(x => x.classList.remove("selected")); c.classList.add("selected"); sel = c.dataset.v; go.disabled = false; });
+      body.querySelectorAll(".choice").forEach(c => c.onclick = () => { if (done) return; body.querySelectorAll(".choice").forEach(x => x.classList.remove("selected")); c.classList.add("selected"); sel = c.dataset.v; go.disabled = false; if (autoCheckOn()) go.click(); });
     };
     if (q.kind === "mc") {
       body.innerHTML = `<div class="prompt">${esc(q.q)}</div><div class="choices one-col stagger">${shuffle(q.options).map((o, i) => `<button class="choice" data-v="${esc(o)}" style="--i:${i}">${esc(o)}</button>`).join("")}</div>`;
@@ -452,6 +452,7 @@ Reply with only JSON: {"score": 0-100 (meaning matters, not wording), "feedback"
       fb.innerHTML = `<div class="feedback ${ok === false ? "bad" : "ok"}">${ok === null ? "" : Mascot.react(ok, combo)}<div style="font-weight:400">${ok === false && !isText ? "Answer: " : ""}${esc(text)}</div></div>`;
       go.textContent = "Continue"; go.disabled = false;
       go.onclick = () => { k++; next(); };
+      autoAdvance(go, isText ? false : ok !== false, () => go.click());
     }
   };
   const finishQuiz = () => {

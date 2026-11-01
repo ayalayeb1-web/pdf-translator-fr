@@ -228,6 +228,7 @@ function earTraining() {
           <div style="font-weight:400">The difference: <b>${esc(pr[6])}</b>. Tap both words to compare them.</div></div>
           <button class="btn" id="nx" style="margin-top:10px">Continue</button>`;
         document.getElementById("nx").onclick = () => { k++; next(); };
+        autoAdvance(document.getElementById("nx"), ok, () => document.getElementById("nx")?.click());
       });
     });
   };

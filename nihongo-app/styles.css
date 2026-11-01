@@ -630,3 +630,9 @@ body.in-lesson main { padding-bottom: 24px; }
 .voice-styles.two { grid-template-columns: 1fr 1fr; }
 .voice-styles.four { grid-template-columns: repeat(4, 1fr); }
 .voice-styles.four .vstyle { font-size: .75rem; }
+
+/* Auto-continue: a bar fills the button before moving on */
+.btn.auto { position: relative; overflow: hidden; }
+.btn.auto::after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: rgba(255,255,255,.85); transform-origin: left; animation: autoFill var(--ms, 1.5s) linear forwards; }
+.btn.secondary.auto::after { background: var(--pink); }
+@keyframes autoFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }

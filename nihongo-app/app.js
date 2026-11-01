@@ -475,6 +475,7 @@ function renderProfile() {
     <div class="card">
       <b>Settings</b>
       <label class="toggle-row" for="optVoice"><span>🦊 Kitsu speaks out loud</span><input type="checkbox" id="optVoice" ${state.voice !== false ? "checked" : ""}></label>
+      <label class="toggle-row" for="optAuto"><span>⚡ Auto-check &amp; next</span><input type="checkbox" id="optAuto" ${state.autoNext !== false ? "checked" : ""}></label>
       <label class="toggle-row" for="optSfx"><span>🔔 Sound effects</span><input type="checkbox" id="optSfx" ${state.sfx !== false ? "checked" : ""}></label>
       <label class="toggle-row" for="optFuri"><span>あ Furigana in readings</span><input type="checkbox" id="optFuri" ${state.furigana !== false ? "checked" : ""}></label>
     </div>
@@ -499,6 +500,7 @@ function renderProfile() {
     setTimeout(() => voiceDiagnosis(document.getElementById("voiceDiag")), 700);
   };
   document.getElementById("optVoice").onchange = e => { state.voice = e.target.checked; save(); };
+  document.getElementById("optAuto").onchange = e => { state.autoNext = e.target.checked; save(); };
   document.getElementById("optSfx").onchange = e => { state.sfx = e.target.checked; save(); if (e.target.checked) Mascot.sfx("right"); };
   document.getElementById("optFuri").onchange = e => { state.furigana = e.target.checked; save(); };
   document.getElementById("reset").onclick = () => {
@@ -674,6 +676,18 @@ function renderIntro(s) {
 // Accept any of the readings listed as "a / b".
 const romajiMatches = (typed, romaji) => romaji.split("/").some(r => normalize(r) === normalize(typed));
 
+// Auto-continue: after an answer is checked, move on by itself (a bar fills on the button).
+// Right answers wait ~1.3s, wrong ones ~2.8s so there's time to read the correction. Tapping skips.
+function autoAdvance(btn, ok, go) {
+  if (state.autoNext === false || !btn) return;
+  const ms = ok ? 1300 : 2800;
+  btn.style.setProperty("--ms", ms + "ms");
+  btn.classList.remove("auto"); void btn.offsetWidth; btn.classList.add("auto");
+  const t = setTimeout(() => { if (document.body.contains(btn)) go(); }, ms);
+  btn.addEventListener("click", () => clearTimeout(t), { once: true });
+}
+const autoCheckOn = () => state.autoNext !== false;
+
 function renderQuestion(s) {
   if (!s.queue.length) return finishSession(s);
   const q = s.queue[0];
@@ -766,7 +780,10 @@ function renderQuestion(s) {
   if (q.kind === "type") {
     const input = document.getElementById("ans");
     input.focus();
-    input.oninput = () => (check.disabled = !input.value.trim());
+    input.oninput = () => {
+      check.disabled = !input.value.trim();
+      if (autoCheckOn() && input.value.trim() && answerCheck()) check.click();
+    };
     input.onkeydown = e => { if (e.key === "Enter" && !check.disabled) check.click(); };
   }
   if (q.kind === "order") {
@@ -775,6 +792,7 @@ function renderQuestion(s) {
       line.innerHTML = s.picked.map((p, i) => `<button class="tile" data-from="line" data-i="${i}">${esc(p.t)}</button>`).join("");
       pool.innerHTML = s.pool.map((p, i) => `<button class="tile" data-from="pool" data-i="${i}">${esc(p.t)}</button>`).join("");
       check.disabled = s.pool.length > 0;
+      if (autoCheckOn() && !s.pool.length && !check.dataset.done) setTimeout(() => !check.dataset.done && check.click(), 250);
       $view.querySelectorAll(".tile").forEach(b => b.onclick = () => {
         if (check.dataset.done) return;
         const i = Number(b.dataset.i);
@@ -789,6 +807,7 @@ function renderQuestion(s) {
     if (check.dataset.done) return;
     $view.querySelectorAll(".choice").forEach(x => x.classList.remove("selected"));
     c.classList.add("selected"); s.selected = c.dataset.id; check.disabled = false;
+    if (autoCheckOn()) check.click();
   });
 
   check.onclick = () => {
@@ -808,6 +827,7 @@ function renderQuestion(s) {
       <div style="font-weight:400">${ok ? "" : "Correct answer: "}${esc(answerText)}</div></div>`;
     if (q.kind !== "listen" && sayAfter) setTimeout(() => speak(sayAfter), 350);
     check.textContent = "Continue";
+    autoAdvance(check, ok, () => check.click());
     check.disabled = false;
     check.focus();
   };
