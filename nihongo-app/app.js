@@ -256,8 +256,35 @@ function moveTabInk() {
   const active = document.querySelector("#tabs button.active"), ink = document.querySelector(".tab-ink");
   if (active && ink) { ink.style.width = active.offsetWidth - 12 + "px"; ink.style.transform = `translateX(${active.offsetLeft + 6}px)`; }
 }
+// Lantern badges on the dock: cards due in Review, a dot on Speak until today's mission is done.
+function updateTabBadges() {
+  const due = dueItems().length + (typeof sayDue === "function" ? sayDue().length : 0);
+  const badge = document.getElementById("badgeReview");
+  if (badge) { badge.hidden = !due; badge.textContent = due > 99 ? "99+" : due; }
+  const dot = document.getElementById("dotSpeak");
+  if (dot) dot.hidden = !!state.missions?.[today()]?.done;
+}
+// A little burst of sakura petals from a tapped dock button.
+function petalBurst(btn) {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement("span");
+    p.className = "petal";
+    const a = (-150 + i * 24 + Math.random() * 14) * Math.PI / 180, d = 26 + Math.random() * 18;
+    p.style.setProperty("--x", Math.cos(a) * d + "px"); p.style.setProperty("--y", Math.sin(a) * d + "px");
+    p.style.setProperty("--r", Math.random() * 360 + "deg");
+    btn.append(p); setTimeout(() => p.remove(), 750);
+  }
+}
+document.getElementById("tabs").addEventListener("pointerdown", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  petalBurst(b);
+  const icon = b.querySelector(".ti"); icon.classList.remove("tap"); void icon.offsetWidth; icon.classList.add("tap");
+});
+
 function setTab(tab) {
   const dir = TAB_ORDER.indexOf(tab) >= TAB_ORDER.indexOf(currentTab) ? 1 : -1;
+  updateTabBadges();
   currentTab = tab;
   if (typeof stopAmbient === "function") stopAmbient();
   document.body.classList.remove("in-lesson");

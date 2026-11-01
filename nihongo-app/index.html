@@ -21,14 +21,25 @@
 
   <main id="view"></main>
 
-  <nav class="tabs" id="tabs">
-    <span class="tab-ink" aria-hidden="true"></span>
-    <button data-tab="home" class="active"><span>🏠</span>Learn</button>
-    <button data-tab="watch"><span>🎬</span>Watch</button>
-    <button data-tab="speak"><span>🗣️</span>Speak</button>
-    <button data-tab="review"><span>🔁</span>Review</button>
-    <button data-tab="chart"><span>✍️</span>Write</button>
-    <button data-tab="profile"><span>📈</span>Me</button>
+  <nav class="tabs" id="tabs" aria-label="Main">
+    <button data-tab="home" class="active" aria-label="Learn">
+      <svg class="ti ti-torii" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 5.2c6.4 1.6 12.6 1.6 19 0" class="thick"/><path d="M4.5 9.2h15"/><path d="M7.2 6.8V20.5M16.8 6.8V20.5"/><path d="M12 6.9v2.3"/></svg>
+      <span class="tab-label">Learn</span></button>
+    <button data-tab="watch" aria-label="Watch">
+      <svg class="ti ti-watch" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.8" y="4.5" width="18.4" height="13" rx="3.5"/><path d="M10.2 8.4l4.6 2.6-4.6 2.6z" class="fill"/><path d="M8.5 20.5h7"/></svg>
+      <span class="tab-label">Watch</span></button>
+    <button data-tab="speak" aria-label="Speak">
+      <svg class="ti ti-speak" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7.5L7 20.2v-3.7H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z"/><path d="M8 10.5h.01M12 10.5h.01M16 10.5h.01" class="dots"/></svg>
+      <span class="tab-label">Speak</span><span class="tab-dot" id="dotSpeak" hidden></span></button>
+    <button data-tab="review" aria-label="Review">
+      <svg class="ti ti-enso" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.6 5.3A8.6 8.6 0 1 0 20.6 12" class="enso"/><path d="M20.9 8.6l-.3 3.6-3.3-1.2" /></svg>
+      <span class="tab-label">Review</span><span class="tab-badge" id="badgeReview" hidden></span></button>
+    <button data-tab="chart" aria-label="Write">
+      <svg class="ti ti-brush" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5c-3.4 1.4-7.4 5-9.6 8.2l1.4 1.4c3.2-2.2 6.8-6.2 8.2-9.6z"/><path d="M10.4 12.4c-2.6.1-4.2 1.6-4.4 4-.1 1.6-1.1 2.6-2.5 3.1 3.6 1.4 7.6.4 8.3-3.4.2-1.2-.3-2.6-1.4-3.7z" class="fill"/></svg>
+      <span class="tab-label">Write</span></button>
+    <button data-tab="profile" aria-label="Me">
+      <svg class="ti ti-fox" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3.8l4.2 4.4h7.6L20 3.8c.9 4.6.4 8.6-1.8 11.4L12 20.4l-6.2-5.2C3.6 12.4 3.1 8.4 4 3.8z"/><path d="M9.2 12.2h.01M14.8 12.2h.01" class="dots"/><path d="M11 15.4h2l-1 1.1z" class="fill"/></svg>
+      <span class="tab-label">Me</span></button>
   </nav>
 
   <div id="toast" class="toast" hidden></div>
