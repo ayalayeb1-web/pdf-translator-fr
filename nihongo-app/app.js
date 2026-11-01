@@ -94,7 +94,7 @@ function setTab(tab) {
   currentTab = tab;
   document.body.classList.remove("in-lesson");
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  ({ home: renderHome, review: renderReview, chart: renderChart, profile: renderProfile })[tab]();
+  VIEWS[tab]();
   $view.scrollTop = 0;
 }
 document.getElementById("tabs").addEventListener("click", e => {
@@ -374,5 +374,6 @@ function finishSession(s) {
 }
 
 // ---------- Boot ----------
-save();
-setTab("home");
+// Other scripts (e.g. speak.js) can register extra tabs in VIEWS before boot.
+const VIEWS = { home: renderHome, review: renderReview, chart: renderChart, profile: renderProfile };
+window.addEventListener("DOMContentLoaded", () => { save(); setTab("home"); });

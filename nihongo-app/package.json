@@ -1,0 +1,8 @@
+{
+  "name": "nihongo-path",
+  "private": true,
+  "type": "module",
+  "description": "Japanese learning app. The static app works on its own; server.js adds an optional AI tutor.",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@anthropic-ai/sdk": "^1.3.0" }
+}

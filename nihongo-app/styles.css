@@ -99,3 +99,29 @@ h2 { margin: 18px 0 10px; }
 .week { display: flex; gap: 6px; align-items: flex-end; height: 100px; }
 .week div { flex: 1; text-align: center; font-size: .7rem; color: var(--muted); }
 .week .bar { background: var(--pink); border-radius: 6px 6px 0 0; min-height: 3px; margin-bottom: 4px; }
+
+/* Speak / role-play */
+.scenario { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; color: var(--text); cursor: pointer; }
+.scenario .emoji { font-size: 2.2rem; }
+.scenario small { color: var(--muted); display: block; }
+.pill { display: inline-block; font-size: .7rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: var(--border); color: var(--muted); margin-left: 6px; vertical-align: middle; }
+.pill.ai { background: color-mix(in srgb, #7a9cff 25%, var(--card)); color: #5b7de8; }
+.chat { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.bubble { max-width: 85%; padding: 10px 14px; border-radius: 18px; border: 2px solid var(--border); background: var(--card); }
+.bubble.npc { align-self: flex-start; border-bottom-left-radius: 6px; }
+.bubble.me { align-self: flex-end; border-bottom-right-radius: 6px; background: color-mix(in srgb, var(--pink) 14%, var(--card)); border-color: color-mix(in srgb, var(--pink) 40%, var(--border)); }
+.bubble .jp { font-size: 1.2rem; font-weight: 700; }
+.bubble .sub { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.bubble .tools { display: flex; gap: 6px; margin-top: 6px; }
+.bubble .tools button { background: none; border: 1px solid var(--border); border-radius: 99px; font: inherit; font-size: .75rem; padding: 2px 10px; color: var(--muted); cursor: pointer; }
+.bubble .score { font-size: .8rem; font-weight: 800; margin-top: 6px; }
+.bubble .score.ok { color: var(--green); } .bubble .score.meh { color: #e8a33c; } .bubble .score.bad { color: var(--red); }
+.hints { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.hint { text-align: left; background: var(--card); border: 2px dashed var(--border); border-radius: 14px; padding: 8px 12px; font: inherit; color: var(--text); cursor: pointer; }
+.hint small { color: var(--muted); display: block; }
+.answer-bar { display: flex; gap: 8px; align-items: center; }
+.answer-bar input { flex: 1; margin: 0; font-size: 1.05rem; padding: 12px; }
+.mic { width: 64px; height: 64px; flex: none; border-radius: 50%; border: 0; background: var(--pink); color: #fff; font-size: 1.7rem; box-shadow: 0 4px 0 var(--pink-dark); cursor: pointer; }
+.mic.listening { animation: pulse 1s infinite; background: var(--red); }
+@keyframes pulse { 50% { transform: scale(1.08); } }
+.typing { color: var(--muted); font-style: italic; }
