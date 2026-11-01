@@ -178,7 +178,7 @@ function speakShell(sc, subtitle) {
     <div id="hints" class="hints"></div>
     <div id="controls"></div>
   </div>`;
-  document.getElementById("quit").onclick = () => { window.speechSynthesis?.cancel(); setTab("speak"); };
+  document.getElementById("quit").onclick = () => { TTS.cancel(); setTab("speak"); };
 }
 
 function answerControls(onAnswer, extraButtons = "") {
@@ -197,7 +197,7 @@ function answerControls(onAnswer, extraButtons = "") {
   const mic = document.getElementById("mic");
   if (mic) mic.onclick = () => {
     if (typed.value.trim()) return submitTyped();
-    window.speechSynthesis?.cancel();
+    TTS.cancel();
     mic.classList.add("listening");
     listen(onAnswer, () => mic.classList.remove("listening"));
   };

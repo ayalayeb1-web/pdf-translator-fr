@@ -11,17 +11,7 @@ const sayDue = () => allPhrases().filter(p => state.sayDeck[p.id] && state.sayDe
 
 // Text-to-speech with an end callback (and a safety timeout if the browser never fires one).
 function say(text, rate = 0.9, onend) {
-  let fired = false;
-  const end = () => { if (!fired) { fired = true; onend?.(); } };
-  const est = 900 + text.length * 230 / rate;
-  if (!("speechSynthesis" in window)) { setTimeout(end, 300); return; }
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ja-JP"; u.rate = rate;
-  if (typeof jaVoice !== "undefined" && jaVoice) u.voice = jaVoice;
-  u.onend = end; u.onerror = end;
-  speechSynthesis.speak(u);
-  setTimeout(end, est + 1500);
+  TTS.speak(text, { rate, onend });
 }
 const waveHtml = () => `<div class="wave" id="wave" aria-hidden="true">${Array.from({ length: 24 }, (_, i) => `<i style="--k:${i}"></i>`).join("")}</div>`;
 const setWave = mode => { const w = document.getElementById("wave"); if (w) w.className = "wave " + (mode || ""); };
@@ -130,7 +120,7 @@ function shadowSession(phrases, title) {
       <div id="phaseBox" class="phase-box"></div>
       <div class="spacer"></div>
     </div>`;
-    document.getElementById("quit").onclick = () => { speechSynthesis?.cancel(); setTab("speak"); };
+    document.getElementById("quit").onclick = () => { TTS.cancel(); setTab("speak"); };
     document.getElementById("roT").onclick = () => { state.showRomaji = state.showRomaji === false; save(); draw(); };
     const box = document.getElementById("phaseBox");
     if (phase === "listen") {

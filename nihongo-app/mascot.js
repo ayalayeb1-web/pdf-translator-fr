@@ -74,12 +74,8 @@ const Mascot = (() => {
 
   // ---- voice & sound ----
   function voice(line) {
-    if (state.voice === false || !("speechSynthesis" in window)) return;
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(line.jp);
-    u.lang = "ja-JP"; u.rate = 1; u.pitch = 1.6;
-    if (typeof jaVoice !== "undefined" && jaVoice) u.voice = jaVoice;
-    speechSynthesis.speak(u);
+    if (state.voice === false) return;
+    TTS.speak(line.jp, { rate: 1.02, character: true });
   }
   let ctx;
   function tone(freq, start, dur, type = "sine", gain = 0.12) {

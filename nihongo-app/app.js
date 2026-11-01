@@ -56,19 +56,79 @@ const dueItems = () => Object.entries(state.srs)
 const mastered = id => (state.srs[id]?.box || 0) >= 4;
 
 // ---------- Audio ----------
-let jaVoice = null;
-function pickVoice() {
-  if (!("speechSynthesis" in window)) return;
-  jaVoice = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith("ja")) || null;
-}
-if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+// One robust text-to-speech engine for the whole app. It works around common browser problems:
+//  - iPhone/iPad only speak after a real tap → we "unlock" speech on the first touch;
+//  - Chrome sometimes drops a line spoken right after cancel() → small delay after cancelling;
+//  - utterances can be garbage-collected mid-speech → we keep a reference;
+//  - voices load late → we keep re-checking for a Japanese voice.
+const TTS = (() => {
+  const ok = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  let voices = [], ja = null, unlocked = false, keep = [], timer = null;
+  const jaOnly = vs => vs.filter(v => /^ja/i.test(v.lang || "") || /japan|日本/i.test(v.name || ""));
+  // Prefer bright, female-sounding voices (they suit the cute style best).
+  const pickBest = vs => {
+    const j = jaOnly(vs);
+    return j.find(v => /nanami|kyoko|haruka|ayumi|o-ren|mizuki|female/i.test(v.name)) || j.find(v => /google/i.test(v.name)) || j[0] || null;
+  };
+  const STYLES = { cute: { pitch: 1.45, rate: 0.06 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.88, rate: -0.08 } };
+  const load = () => { if (!ok) return; try { voices = speechSynthesis.getVoices() || []; ja = pickBest(voices); } catch (_) {} };
+  if (ok) {
+    load();
+    try { speechSynthesis.addEventListener("voiceschanged", load); } catch (_) { speechSynthesis.onvoiceschanged = load; }
+    [300, 1000, 2500, 5000].forEach(t => setTimeout(load, t));
+  }
+  const unlock = () => {
+    if (unlocked || !ok) return;
+    unlocked = true;
+    try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "ja-JP"; speechSynthesis.speak(u); } catch (_) {}
+  };
+  document.addEventListener("pointerdown", unlock, { capture: true });
+  document.addEventListener("keydown", unlock, { capture: true });
+
+  // character: true → Kitsu's own voice (always cute); otherwise the lesson voice style from settings.
+  function speak(text, { rate = 0.85, pitch = 1, onend, character = false } = {}) {
+    const style = STYLES[state.voiceStyle || "cute"] || STYLES.cute;
+    if (character) { pitch = 1.75; rate = Math.max(rate, 1.02); }
+    else { pitch = Math.min(2, pitch * style.pitch); rate = Math.max(0.4, rate + style.rate); }
+    const chosen = (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
+    let fired = false;
+    const end = () => { if (!fired) { fired = true; onend?.(); } };
+    if (!ok || !text) { setTimeout(end, 200); return false; }
+    clearTimeout(timer);
+    const go = () => {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "ja-JP"; u.rate = rate; u.pitch = pitch;
+        if (chosen) u.voice = chosen;
+        u.onend = u.onerror = () => { keep = keep.filter(x => x !== u); end(); };
+        keep.push(u);
+        if (speechSynthesis.paused) speechSynthesis.resume();
+        speechSynthesis.speak(u);
+      } catch (_) { end(); }
+    };
+    if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); timer = setTimeout(go, 90); } else go();
+    setTimeout(end, 1800 + text.length * 260 / rate);
+    return true;
+  }
+  return {
+    speak,
+    cancel: () => { if (ok) { clearTimeout(timer); speechSynthesis.cancel(); } },
+    status: () => { load(); return { supported: ok, voices: voices.length, ja: ja ? `${ja.name} (${ja.lang})` : null }; },
+    list: () => { load(); return jaOnly(voices); },
+  };
+})();
+let jaVoice = null; // kept for older call sites; TTS picks the voice now
+
+let voiceWarned = false;
 function speak(text) {
-  if (!("speechSynthesis" in window)) return toast("Audio isn't supported in this browser");
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ja-JP"; u.rate = 0.8;
-  if (jaVoice) u.voice = jaVoice;
-  speechSynthesis.speak(u);
+  TTS.speak(text);
+  if (!voiceWarned) setTimeout(() => {
+    const st = TTS.status();
+    if (!voiceWarned && (!st.supported || (st.voices > 0 && !st.ja))) {
+      voiceWarned = true;
+      toast(st.supported ? "No Japanese voice on this device. Open Me → Voice to fix it." : "This browser can't speak. Try Chrome or Safari.");
+    }
+  }, 1200);
 }
 
 // ---------- Helpers ----------
@@ -392,6 +452,20 @@ function renderProfile() {
       <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
     </div>
     <button class="card notes-entry" id="openNotes"><span>📝 <b>My notes</b></span><span class="muted">${Object.keys(state.notes || {}).length} notes →</span></button>
+    <div class="card voice-test">
+      <b>🔊 Voice</b>
+      <p class="muted" style="margin:6px 0 10px">Can't hear Kitsu or the lessons? Tap the button and check what it says below.</p>
+      <div class="voice-styles">${[["cute", "🌸", "Cute"], ["natural", "🎙️", "Natural"], ["calm", "🍵", "Calm"]].map(([k, ic, l]) =>
+        `<button class="vstyle ${(state.voiceStyle || "cute") === k ? "active" : ""}" data-style="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
+      <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Lesson voice style. Kitsu always keeps her own cute voice. Natural is best for copying real pronunciation.</p>
+      ${TTS.list().length > 1 ? `<label class="field"><span>Japanese voice on this device</span>
+        <select id="voicePick" class="type-input" style="margin:0">
+          <option value="">Automatic</option>
+          ${TTS.list().map(v => `<option value="${esc(v.name)}" ${state.ttsVoice === v.name ? "selected" : ""}>${esc(v.name)}</option>`).join("")}
+        </select></label>` : ""}
+      <div class="tr-actions"><button class="btn" id="testVoice">🔊 Lesson voice</button><button class="btn secondary" id="testKitsu">🦊 Kitsu</button></div>
+      <div id="voiceDiag"></div>
+    </div>
     <div class="card">
       <b>Settings</b>
       <label class="toggle-row" for="optVoice"><span>🦊 Kitsu speaks out loud</span><input type="checkbox" id="optVoice" ${state.voice !== false ? "checked" : ""}></label>
@@ -400,6 +474,17 @@ function renderProfile() {
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
   document.getElementById("openNotes").onclick = () => setTab("notes");
+  $view.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
+    state.voiceStyle = b.dataset.style; save();
+    $view.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("active", x === b));
+    TTS.speak("こんにちは！一緒に日本語を勉強しよう！", { rate: 0.9 });
+  });
+  document.getElementById("voicePick")?.addEventListener("change", e => { state.ttsVoice = e.target.value; save(); TTS.speak("この声はどうですか？", { rate: 0.9 }); });
+  document.getElementById("testKitsu").onclick = () => TTS.speak("やっほー！キツだよ！一緒にがんばろうね！", { character: true });
+  document.getElementById("testVoice").onclick = () => {
+    TTS.speak("こんにちは！キツネのキツです。聞こえますか？", { rate: 0.9 });
+    setTimeout(() => voiceDiagnosis(document.getElementById("voiceDiag")), 700);
+  };
   document.getElementById("optVoice").onchange = e => { state.voice = e.target.checked; save(); };
   document.getElementById("optSfx").onchange = e => { state.sfx = e.target.checked; save(); if (e.target.checked) Mascot.sfx("right"); };
   document.getElementById("optFuri").onchange = e => { state.furigana = e.target.checked; save(); };
@@ -408,6 +493,32 @@ function renderProfile() {
       if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {}, aiLessons: state.aiLessons, notes: state.notes }; save(); renderProfile(); }
     });
   };
+}
+
+// Explains why there may be no sound, with steps for the viewer's device.
+function voiceDiagnosis(box) {
+  const st = TTS.status(), ua = navigator.userAgent;
+  const device = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? "ios"
+    : /Android/.test(ua) ? "android" : /Windows/.test(ua) ? "windows" : /Macintosh/.test(ua) ? "mac" : "other";
+  const steps = {
+    ios: ["Flip the <b>silent switch</b> on the side of your iPhone off (silent mode mutes this voice) and turn the volume up.",
+      "Settings → Accessibility → Spoken Content → Voices → <b>Japanese</b> → download a voice (for example Kyoko).",
+      "Close and reopen the app page."],
+    android: ["Turn the <b>media volume</b> up.",
+      "Settings → System → Languages &amp; input → <b>Text-to-speech output</b> → choose <b>Speech Services by Google</b>.",
+      "Tap ⚙️ next to it → Install voice data → <b>Japanese</b> → download.",
+      "Close the browser completely and reopen the page."],
+    windows: ["Turn the volume up.", "Settings → Time &amp; language → Speech → <b>Add voices</b> → Japanese.", "Restart the browser. (Chrome or Edge work best.)"],
+    mac: ["Turn the volume up.", "System Settings → Accessibility → Spoken Content → System voice → Manage voices → <b>Japanese</b> (Kyoko).", "Restart the browser."],
+    other: ["Turn the volume up.", "Use Chrome, Edge or Safari, and install a Japanese text-to-speech voice in your system settings."],
+  }[device];
+  box.innerHTML = `<div class="diag">
+    <div class="diag-row"><span>Speech in this browser</span><b class="${st.supported ? "good" : "bad"}">${st.supported ? "✓ supported" : "✗ not supported"}</b></div>
+    <div class="diag-row"><span>Voices found</span><b>${st.voices}</b></div>
+    <div class="diag-row"><span>Japanese voice</span><b class="${st.ja ? "good" : "bad"}">${st.ja ? "✓ " + esc(st.ja) : "✗ not found"}</b></div>
+    <p style="margin:12px 0 6px"><b>${st.ja ? "Still silent? Check these:" : "Install a Japanese voice:"}</b></p>
+    <ol class="diag-steps">${steps.map(x => `<li>${x}</li>`).join("")}</ol>
+  </div>`;
 }
 
 // ---------- Lessons & quiz engine ----------
@@ -466,7 +577,7 @@ function bindQuit(s) {
   if (nb && s?.lesson) nb.onclick = () => openNote(s.lesson.id, s.lesson.title);
   document.getElementById("quit").onclick = () => {
     askConfirm("Quit this lesson? Progress in it will be lost.", "Quit").then(ok => {
-      if (ok) { window.speechSynthesis?.cancel(); setTab(currentTab); }
+      if (ok) { TTS.cancel(); setTab(currentTab); }
     });
   };
 }

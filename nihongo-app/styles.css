@@ -613,3 +613,17 @@ body.in-lesson main { padding-bottom: 24px; }
 .stats span { white-space: nowrap; }
 .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 .ambient { z-index: 5; }
+
+/* Voice test */
+.diag { margin-top: 12px; animation: sheetUp .4s var(--spring) both; }
+.diag-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: .9rem; }
+.diag-row b { text-align: right; overflow-wrap: anywhere; }
+.diag-row .good { color: var(--green); } .diag-row .bad { color: var(--red); }
+.diag-steps { margin: 0; padding-left: 20px; line-height: 1.55; font-size: .9rem; }
+.diag-steps li { margin-bottom: 4px; }
+
+.voice-styles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.vstyle { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg); font: inherit; font-weight: 900; font-size: .85rem; color: var(--text); cursor: pointer; transition: transform .25s var(--spring), border-color .2s; }
+.vstyle span { font-size: 1.4rem; }
+.vstyle:hover { transform: translateY(-2px); }
+.vstyle.active { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 14%, var(--card)); box-shadow: 0 6px 16px -10px var(--pink); }
