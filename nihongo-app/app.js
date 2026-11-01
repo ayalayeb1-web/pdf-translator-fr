@@ -782,7 +782,7 @@ function renderQuestion(s) {
     input.focus();
     input.oninput = () => {
       check.disabled = !input.value.trim();
-      if (autoCheckOn() && input.value.trim() && answerCheck()) check.click();
+      if (autoCheckOn() && !check.dataset.done && input.value.trim() && answerCheck()) check.click();
     };
     input.onkeydown = e => { if (e.key === "Enter" && !check.disabled) check.click(); };
   }
