@@ -39,7 +39,7 @@ cd nihongo-app && npm install
 ANTHROPIC_API_KEY=sk-ant-... npm start
 ```
 
-Then open http://localhost:8000. A "Free talk with AI tutor" button appears under each scenario.
+Then open http://localhost:8000. A "Chat with AI" button appears under each scenario.
 
 - The default model is `claude-opus-5-5`. To keep costs very low, set `NIHONGO_MODEL=claude-haiku-5-5`, which is about 40x cheaper per message.
 - The server keeps your key private. The browser never sees it.

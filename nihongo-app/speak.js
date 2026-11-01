@@ -154,7 +154,7 @@ async function renderSpeak() {
             <small>${esc(sc.goal)}</small>
             ${best[sc.id] ? `<small>Best: ${best[sc.id]}%</small>` : ""}</span>
         </button>
-        ${aiAvailable ? `<button class="btn secondary" style="margin:-6px 0 16px" data-ai="${sc.id}">🤖 Free talk with AI tutor</button>` : ""}
+        ${aiAvailable ? `<button class="btn secondary" style="margin:-6px 0 16px" data-ai="${sc.id}">🤖 Chat with AI</button>` : ""}
       `).join("")}`;
     $view.querySelectorAll("[data-id]").forEach(b => b.onclick = () => runScenario(SCENARIOS.find(s => s.id === b.dataset.id)));
     $view.querySelectorAll("[data-ai]").forEach(b => b.onclick = () => runAiChat(SCENARIOS.find(s => s.id === b.dataset.ai)));
