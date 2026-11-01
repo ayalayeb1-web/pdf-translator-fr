@@ -231,7 +231,7 @@ async function generateLesson(lesson) {
 
 // ---------- Views ----------
 let currentTab = "home";
-const TAB_ORDER = ["home", "speak", "review", "chart", "notes", "profile"];
+const TAB_ORDER = ["home", "watch", "speak", "review", "chart", "profile", "notes"];
 
 // Smoothly swap what's on screen: slide/fade the old view out, render, slide the new one in.
 let swapToken = 0;
@@ -261,7 +261,9 @@ function setTab(tab) {
   currentTab = tab;
   if (typeof stopAmbient === "function") stopAmbient();
   document.body.classList.remove("in-lesson");
-  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  const navTab = tab === "notes" ? "profile" : tab;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === navTab));
+  if (typeof closePlayer === "function") closePlayer();
   moveTabInk();
   swapView(() => { $view.scrollTop = 0; VIEWS[tab](); }, dir);
 }
@@ -362,6 +364,7 @@ function renderProfile() {
       <div class="row-list"><span>🈶 Kanji mastered</span><b>${kanjiKnown}</b></div>
       <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
     </div>
+    <button class="card notes-entry" id="openNotes"><span>📝 <b>My notes</b></span><span class="muted">${Object.keys(state.notes || {}).length} notes →</span></button>
     <div class="card">
       <b>Settings</b>
       <label class="toggle-row" for="optVoice"><span>🦊 Kitsu speaks out loud</span><input type="checkbox" id="optVoice" ${state.voice !== false ? "checked" : ""}></label>
@@ -369,6 +372,7 @@ function renderProfile() {
       <label class="toggle-row" for="optFuri"><span>あ Furigana in readings</span><input type="checkbox" id="optFuri" ${state.furigana !== false ? "checked" : ""}></label>
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
+  document.getElementById("openNotes").onclick = () => setTab("notes");
   document.getElementById("optVoice").onchange = e => { state.voice = e.target.checked; save(); };
   document.getElementById("optSfx").onchange = e => { state.sfx = e.target.checked; save(); if (e.target.checked) Mascot.sfx("right"); };
   document.getElementById("optFuri").onchange = e => { state.furigana = e.target.checked; save(); };

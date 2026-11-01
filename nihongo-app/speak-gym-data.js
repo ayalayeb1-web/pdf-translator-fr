@@ -1,0 +1,97 @@
+// Speaking gym content. Phrase: [japanese, romaji, english]
+const PHRASE_PACKS = [
+  { id: "food", icon: "🍜", title: "Restaurant", level: "A1", phrases: [
+    ["すみません、メニューをください。", "sumimasen, menyuu o kudasai.", "Excuse me, may I have the menu?"],
+    ["これは何ですか。", "kore wa nan desu ka.", "What is this?"],
+    ["おすすめは何ですか。", "osusume wa nan desu ka.", "What do you recommend?"],
+    ["これをひとつください。", "kore o hitotsu kudasai.", "One of these, please."],
+    ["水をください。", "mizu o kudasai.", "Water, please."],
+    ["カードで払えますか。", "kaado de haraemasu ka.", "Can I pay by card?"],
+    ["お会計をお願いします。", "okaikei o onegaishimasu.", "The check, please."],
+    ["ごちそうさまでした。", "gochisousama deshita.", "Thank you for the meal."],
+  ]},
+  { id: "travel", icon: "🚃", title: "Getting around", level: "A1", phrases: [
+    ["駅はどこですか。", "eki wa doko desu ka.", "Where is the station?"],
+    ["東京駅までいくらですか。", "toukyou eki made ikura desu ka.", "How much is it to Tokyo Station?"],
+    ["この電車は新宿に行きますか。", "kono densha wa shinjuku ni ikimasu ka.", "Does this train go to Shinjuku?"],
+    ["何番線ですか。", "nanbansen desu ka.", "Which platform is it?"],
+    ["ここで降ります。", "koko de orimasu.", "I'll get off here."],
+    ["道に迷いました。", "michi ni mayoimashita.", "I'm lost."],
+    ["歩いて何分ですか。", "aruite nanpun desu ka.", "How many minutes on foot?"],
+    ["地図を書いてもらえますか。", "chizu o kaite moraemasu ka.", "Could you draw me a map?"],
+  ]},
+  { id: "shop", icon: "🛍️", title: "Shopping", level: "A1", phrases: [
+    ["これはいくらですか。", "kore wa ikura desu ka.", "How much is this?"],
+    ["見ているだけです。", "mite iru dake desu.", "I'm just looking."],
+    ["試着してもいいですか。", "shichaku shite mo ii desu ka.", "May I try it on?"],
+    ["もう少し大きいサイズはありますか。", "mou sukoshi ookii saizu wa arimasu ka.", "Do you have a slightly bigger size?"],
+    ["免税できますか。", "menzei dekimasu ka.", "Can I buy this tax-free?"],
+    ["袋はいりません。", "fukuro wa irimasen.", "I don't need a bag."],
+    ["これにします。", "kore ni shimasu.", "I'll take this one."],
+  ]},
+  { id: "talk", icon: "💬", title: "Small talk", level: "A2", phrases: [
+    ["お元気ですか。", "ogenki desu ka.", "How are you?"],
+    ["趣味は何ですか。", "shumi wa nan desu ka.", "What are your hobbies?"],
+    ["日本語を勉強しています。", "nihongo o benkyou shite imasu.", "I'm studying Japanese."],
+    ["もう一度言ってください。", "mou ichido itte kudasai.", "Could you say that again?"],
+    ["ゆっくり話してください。", "yukkuri hanashite kudasai.", "Please speak slowly."],
+    ["どういう意味ですか。", "dou iu imi desu ka.", "What does that mean?"],
+    ["週末は何をしましたか。", "shuumatsu wa nani o shimashita ka.", "What did you do on the weekend?"],
+    ["また会いましょう。", "mata aimashou.", "Let's meet again."],
+  ]},
+  { id: "help", icon: "🆘", title: "Emergencies", level: "A2", phrases: [
+    ["助けてください！", "tasukete kudasai!", "Help me, please!"],
+    ["気分が悪いです。", "kibun ga warui desu.", "I feel sick."],
+    ["救急車を呼んでください。", "kyuukyuusha o yonde kudasai.", "Please call an ambulance."],
+    ["財布をなくしました。", "saifu o nakushimashita.", "I lost my wallet."],
+    ["交番はどこですか。", "kouban wa doko desu ka.", "Where is the police box?"],
+    ["英語を話せる人はいますか。", "eigo o hanaseru hito wa imasu ka.", "Is there anyone who speaks English?"],
+    ["アレルギーがあります。", "arerugii ga arimasu.", "I have an allergy."],
+  ]},
+  { id: "work", icon: "💼", title: "Polite & work", level: "B1", phrases: [
+    ["お世話になっております。", "osewa ni natte orimasu.", "Thank you for your continued support. (business greeting)"],
+    ["少々お待ちください。", "shoushou omachi kudasai.", "Please wait a moment."],
+    ["確認いたします。", "kakunin itashimasu.", "I will check."],
+    ["ご連絡ありがとうございます。", "go-renraku arigatou gozaimasu.", "Thank you for contacting us."],
+    ["申し訳ございません。", "moushiwake gozaimasen.", "I'm terribly sorry."],
+    ["よろしくお願いいたします。", "yoroshiku onegai itashimasu.", "I look forward to working with you."],
+    ["失礼します。", "shitsurei shimasu.", "Excuse me. (entering or leaving)"],
+  ]},
+  { id: "anime", icon: "🎌", title: "Anime lines", level: "A2", phrases: [
+    ["絶対にあきらめない！", "zettai ni akiramenai!", "I'll never give up!"],
+    ["任せて！", "makasete!", "Leave it to me!"],
+    ["行くぞ！", "iku zo!", "Let's go!"],
+    ["信じてる。", "shinjiteru.", "I believe in you."],
+    ["待たせたな。", "mataseta na.", "Sorry to keep you waiting."],
+    ["約束だよ。", "yakusoku da yo.", "It's a promise."],
+  ]},
+];
+
+// Ear training: pairs that differ by one sound. [a, romaji a, meaning a, b, romaji b, meaning b, the point]
+const MINIMAL_PAIRS = [
+  ["びょういん", "byouin", "hospital", "びよういん", "biyouin", "hair salon", "ょ (small) vs よ (big)"],
+  ["おばさん", "obasan", "aunt", "おばあさん", "obaasan", "grandmother", "short vs long vowel"],
+  ["おじさん", "ojisan", "uncle", "おじいさん", "ojiisan", "grandfather", "short vs long vowel"],
+  ["ビル", "biru", "building", "ビール", "biiru", "beer", "short vs long vowel"],
+  ["ゆき", "yuki", "snow", "ゆうき", "yuuki", "courage", "short vs long vowel"],
+  ["いえ", "ie", "house", "いいえ", "iie", "no", "short vs long vowel"],
+  ["きて", "kite", "come (te-form)", "きって", "kitte", "stamp", "small っ pause"],
+  ["さか", "saka", "slope", "さっか", "sakka", "writer", "small っ pause"],
+  ["おと", "oto", "sound", "おっと", "otto", "husband", "small っ pause"],
+  ["かこ", "kako", "the past", "かっこ", "kakko", "parentheses / cool", "small っ pause"],
+  ["しゅじん", "shujin", "husband", "しゅうじん", "shuujin", "prisoner", "short vs long vowel"],
+  ["きょう", "kyou", "today", "きよう", "kiyou", "skillful", "ょ (small) vs よ (big)"],
+  ["へや", "heya", "room", "へいや", "heiya", "plain (land)", "short vs long vowel"],
+  ["こい", "koi", "love / carp", "こおり", "koori", "ice", "different vowel length"],
+];
+
+// Offline missions (used when AI isn't available). [task, example answer jp, romaji, en]
+const STATIC_MISSIONS = [
+  ["Introduce yourself in 3 sentences: name, where you're from, one hobby.", "はじめまして。アレックスです。アメリカから来ました。趣味はアニメを見ることです。", "hajimemashite. arekkusu desu. amerika kara kimashita. shumi wa anime o miru koto desu.", "Nice to meet you. I'm Alex. I'm from America. My hobby is watching anime."],
+  ["Describe what you ate today.", "今日は朝ご飯にパンを食べました。昼はラーメンを食べました。とてもおいしかったです。", "kyou wa asagohan ni pan o tabemashita. hiru wa raamen o tabemashita. totemo oishikatta desu.", "Today I had bread for breakfast. For lunch I had ramen. It was very good."],
+  ["Order a drink and a snack at a café.", "すみません、コーヒーとケーキをください。", "sumimasen, koohii to keeki o kudasai.", "Excuse me, a coffee and a cake, please."],
+  ["Say what you will do this weekend.", "週末は友だちと映画を見に行きます。", "shuumatsu wa tomodachi to eiga o mi ni ikimasu.", "This weekend I'll go to see a movie with friends."],
+  ["Ask someone for directions to the station.", "すみません、駅はどこですか。", "sumimasen, eki wa doko desu ka.", "Excuse me, where is the station?"],
+  ["Describe your room in 2-3 sentences.", "わたしの部屋は小さいです。でも、きれいです。机の上にパソコンがあります。", "watashi no heya wa chiisai desu. demo, kirei desu. tsukue no ue ni pasokon ga arimasu.", "My room is small. But it's clean. There's a computer on the desk."],
+  ["Say why you are learning Japanese.", "日本のアニメが好きなので、日本語を勉強しています。", "nihon no anime ga suki na node, nihongo o benkyou shite imasu.", "I'm studying Japanese because I like Japanese anime."],
+];

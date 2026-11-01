@@ -32,6 +32,18 @@ A small, offline-friendly web app for learning Japanese. It's plain HTML, CSS an
 
   The scenery scrolls at a different speed for depth, and petals, fireflies, leaves or snow drift across the screen. Kitsu flies along the road to your next lesson, and switching regions plays a fly-through-the-clouds transition. Tapping a lesson opens a preview sheet.
 - **Motion**: screens slide into each other, choices float in one after another, feedback slides up, the tab indicator glides and buttons have a springy feel. "Reduce motion" turns all of this off.
+- **🎬 Watch & Learn**: add your own video plus its Japanese subtitles (.srt, .vtt or .ass), or paste the Japanese lines.
+  - The AI reads the subtitles and places the video at a level from A1 to C2, then writes a summary, key words, comprehension questions and translation tasks.
+  - ① Watch with subtitles: tap a line to pause and see its translation, romaji and key words.
+  - ② Watch without subtitles: reveal a line when you're stuck.
+  - ③ Quiz: comprehension questions, listening clips (the app replays a moment and you pick the line you heard), and translations graded by AI.
+  - Videos stay in the browser (IndexedDB) and are never uploaded.
+- **🗣️ Speaking gym**:
+  - Daily speaking mission at your level: the AI corrects your answer and gives a natural version, which you then shadow.
+  - Shadowing in three phases (listen at normal or slow speed, speak along with the voice, then say it solo against a countdown), with self-rating that feeds a speaking review deck.
+  - 7 phrase packs: restaurant, travel, shopping, small talk, emergencies, polite and work Japanese, anime lines.
+  - Ear training with minimal pairs, for example びょういん vs びよういん, ビル vs ビール, きて vs きって.
+  - 9 role-plays, including a train station, a hotel check-in and a pharmacy, plus free chat with the AI.
 - **🦊 Kitsu the mascot**: an original fox-spirit guide.
   - She greets you, reacts to every answer and celebrates combos and finished lessons with confetti.
   - She speaks Japanese out loud, with English below.
