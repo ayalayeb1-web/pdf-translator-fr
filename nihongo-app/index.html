@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ff7aa2">
+  <title>Nihongo Path</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🌸 Nihongo Path</div>
+    <div class="stats">
+      <span title="Day streak">🔥 <b id="streak">0</b></span>
+      <span title="Total XP">⭐ <b id="xp">0</b></span>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="home" class="active"><span>🏠</span>Learn</button>
+    <button data-tab="review"><span>🔁</span>Review</button>
+    <button data-tab="chart"><span>あ</span>Kana</button>
+    <button data-tab="profile"><span>📈</span>Progress</button>
+  </nav>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
