@@ -70,7 +70,7 @@ const TTS = (() => {
     const j = jaOnly(vs);
     return j.find(v => /nanami|kyoko|haruka|ayumi|o-ren|mizuki|female/i.test(v.name)) || j.find(v => /google/i.test(v.name)) || j[0] || null;
   };
-  const STYLES = { cute: { pitch: 1.45, rate: 0.06 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.88, rate: -0.08 } };
+  const STYLES = { cute: { pitch: 1.45, rate: 0.06 }, gentle: { pitch: 1.28, rate: -0.07 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.88, rate: -0.08 } };
   const load = () => { if (!ok) return; try { voices = speechSynthesis.getVoices() || []; ja = pickBest(voices); } catch (_) {} };
   if (ok) {
     load();
@@ -88,7 +88,9 @@ const TTS = (() => {
   // character: true → Kitsu's own voice (always cute); otherwise the lesson voice style from settings.
   function speak(text, { rate = 0.85, pitch = 1, onend, character = false } = {}) {
     const style = STYLES[state.voiceStyle || "cute"] || STYLES.cute;
-    if (character) { pitch = 1.75; rate = Math.max(rate, 1.02); }
+    if (character) {
+      if (state.kitsuStyle === "gentle") { pitch = 1.35; rate = 0.86; } else { pitch = 1.75; rate = Math.max(rate, 1.02); }
+    }
     else { pitch = Math.min(2, pitch * style.pitch); rate = Math.max(0.4, rate + style.rate); }
     const chosen = (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
     let fired = false;
@@ -455,9 +457,13 @@ function renderProfile() {
     <div class="card voice-test">
       <b>🔊 Voice</b>
       <p class="muted" style="margin:6px 0 10px">Can't hear Kitsu or the lessons? Tap the button and check what it says below.</p>
-      <div class="voice-styles">${[["cute", "🌸", "Cute"], ["natural", "🎙️", "Natural"], ["calm", "🍵", "Calm"]].map(([k, ic, l]) =>
+      <p style="margin:4px 0 6px;font-weight:800">Kitsu's personality</p>
+      <div class="voice-styles two">${[["cheerful", "☀️", "Cheerful"], ["gentle", "🌙", "Gentle & polite"]].map(([k, ic, l]) =>
+        `<button class="vstyle ${(state.kitsuStyle || "cheerful") === k ? "active" : ""}" data-kitsu="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
+      <p style="margin:14px 0 6px;font-weight:800">Lesson voice</p>
+      <div class="voice-styles four">${[["cute", "🌸", "Cute"], ["gentle", "🌙", "Gentle"], ["natural", "🎙️", "Natural"], ["calm", "🍵", "Calm"]].map(([k, ic, l]) =>
         `<button class="vstyle ${(state.voiceStyle || "cute") === k ? "active" : ""}" data-style="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
-      <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Lesson voice style. Kitsu always keeps her own cute voice. Natural is best for copying real pronunciation.</p>
+      <p class="muted" style="font-size:.8rem;margin:6px 0 10px">How words and sentences sound in lessons. Kitsu's own voice follows her personality. Natural is best for copying real pronunciation.</p>
       ${TTS.list().length > 1 ? `<label class="field"><span>Japanese voice on this device</span>
         <select id="voicePick" class="type-input" style="margin:0">
           <option value="">Automatic</option>
@@ -480,7 +486,14 @@ function renderProfile() {
     TTS.speak("こんにちは！一緒に日本語を勉強しよう！", { rate: 0.9 });
   });
   document.getElementById("voicePick")?.addEventListener("change", e => { state.ttsVoice = e.target.value; save(); TTS.speak("この声はどうですか？", { rate: 0.9 }); });
-  document.getElementById("testKitsu").onclick = () => TTS.speak("やっほー！キツだよ！一緒にがんばろうね！", { character: true });
+  $view.querySelectorAll("[data-kitsu]").forEach(b => b.onclick = () => {
+    state.kitsuStyle = b.dataset.kitsu; save();
+    $view.querySelectorAll("[data-kitsu]").forEach(x => x.classList.toggle("active", x === b));
+    Mascot.voice(b.dataset.kitsu === "gentle"
+      ? { jp: "ふふ、これからはやさしく教えますね。", en: "Hehe, from now on I'll teach you gently." }
+      : { jp: "やっほー！元気にいこうね！", en: "Yay! Let's go with energy!" });
+  });
+  document.getElementById("testKitsu").onclick = () => TTS.speak(state.kitsuStyle === "gentle" ? "こんにちは。キツです。一緒に、ゆっくりがんばりましょうね。" : "やっほー！キツだよ！一緒にがんばろうね！", { character: true });
   document.getElementById("testVoice").onclick = () => {
     TTS.speak("こんにちは！キツネのキツです。聞こえますか？", { rate: 0.9 });
     setTimeout(() => voiceDiagnosis(document.getElementById("voiceDiag")), 700);

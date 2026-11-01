@@ -627,3 +627,6 @@ body.in-lesson main { padding-bottom: 24px; }
 .vstyle span { font-size: 1.4rem; }
 .vstyle:hover { transform: translateY(-2px); }
 .vstyle.active { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 14%, var(--card)); box-shadow: 0 6px 16px -10px var(--pink); }
+.voice-styles.two { grid-template-columns: 1fr 1fr; }
+.voice-styles.four { grid-template-columns: repeat(4, 1fr); }
+.voice-styles.four .vstyle { font-size: .75rem; }

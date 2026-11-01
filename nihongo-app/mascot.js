@@ -35,7 +35,37 @@ const Mascot = (() => {
     ],
     placement: [L("あなたのレベルを調べよう！", "anata no reberu o shirabeyou!", "Let's find your level!")],
   };
-  const pick = a => a[Math.floor(Math.random() * a.length)];
+  // Gentle & polite personality: soft, sweet, a little teasing (original lines).
+  const GENTLE = {
+    morning: [L("おはようございます。今日も一緒にがんばりましょうね。", "ohayou gozaimasu. kyou mo issho ni ganbarimashou ne.", "Good morning. Let's do our best together today, shall we?")],
+    afternoon: [L("こんにちは。少しだけ、お勉強しませんか？", "konnichiwa. sukoshi dake, obenkyou shimasen ka?", "Hello. Shall we study, just a little?")],
+    evening: [L("こんばんは。寝る前に、ひとつだけいかがですか？", "konbanwa. neru mae ni, hitotsu dake ikaga desu ka?", "Good evening. How about just one lesson before bed?")],
+    streak: [L("{n}日連続ですね。えらいですよ。", "{n} nichi renzoku desu ne. erai desu yo.", "{n} days in a row. I'm proud of you.")],
+    due: [L("あらあら、復習カードがたまっていますよ。", "ara ara, fukushuu kaado ga tamatte imasu yo.", "Oh my, your review cards are piling up.")],
+    right: [
+      L("正解です。さすがですね。", "seikai desu. sasuga desu ne.", "Correct. Just as I expected."),
+      L("ふふ、よくできました。", "fufu, yoku dekimashita.", "Hehe, well done."),
+      L("とても上手ですよ。", "totemo jouzu desu yo.", "You're very good at this."),
+      L("その調子です。", "sono choushi desu.", "Keep it up, just like that."),
+    ],
+    combo: [L("{n}連続正解…なかなかやりますね。", "{n} renzoku seikai... nakanaka yarimasu ne.", "{n} in a row… you're quite good, aren't you?")],
+    wrong: [
+      L("あらあら、惜しいですね。", "ara ara, oshii desu ne.", "Oh my, so close."),
+      L("大丈夫ですよ。次はきっとできます。", "daijoubu desu yo. tsugi wa kitto dekimasu.", "It's all right. You'll surely get the next one."),
+      L("ふふ、間違えても怒りませんよ。", "fufu, machigaete mo okorimasen yo.", "Hehe, I won't get angry if you make mistakes."),
+      L("焦らなくていいですよ。", "aseranakute ii desu yo.", "There's no need to rush."),
+    ],
+    finishGreat: [L("完璧です。本当にえらいですね。", "kanpeki desu. hontou ni erai desu ne.", "Perfect. You really are wonderful.")],
+    finish: [L("お疲れさまでした。よくがんばりましたね。", "otsukaresama deshita. yoku ganbarimashita ne.", "Thank you for your hard work. You did well.")],
+    finishLow: [L("がんばりましたね。もう一度、ゆっくりやってみましょう。", "ganbarimashita ne. mou ichido, yukkuri yatte mimashou.", "You tried hard. Let's try once more, slowly.")],
+    placement: [L("あなたのレベル、調べてみましょうか。", "anata no reberu, shirabete mimashou ka.", "Shall we find out your level?")],
+  };
+  const pickRaw = a => a[Math.floor(Math.random() * a.length)];
+  // pick(LINES.x) → uses the gentle variant of that line set when that personality is on.
+  const pick = a => {
+    if (state.kitsuStyle === "gentle") for (const k in LINES) if (LINES[k] === a && GENTLE[k]) return pickRaw(GENTLE[k]);
+    return pickRaw(a);
+  };
   const fill = (line, n) => ({ jp: line.jp.replace("{n}", n), romaji: line.romaji.replace("{n}", n), en: line.en.replace("{n}", n) });
 
   // ---- drawing ----
