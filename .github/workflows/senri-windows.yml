@@ -37,7 +37,17 @@ jobs:
         run: flutter build windows --release
 
       - name: Integration test in a real Windows window
-        run: flutter test integration_test/app_test.dart -d windows
+        shell: pwsh
+        run: |
+          # flutter_tools sometimes fails to delete its temp listener folder *after* the test
+          # (PathNotFoundException during finalization). Judge the test by its own result.
+          $log = flutter test integration_test/app_test.dart -d windows --reporter expanded 2>&1 | Tee-Object -Variable out
+          $text = ($out | Out-String)
+          if ($text -match '\+1: .*real window' -and $text -notmatch '-1: ' -and $text -notmatch 'Some tests failed') {
+            Write-Host "Integration test passed in a real Windows window"
+            exit 0
+          }
+          throw "Integration test failed"
 
       - name: Smoke test of the release EXE
         shell: pwsh
