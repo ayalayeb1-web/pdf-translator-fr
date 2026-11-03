@@ -223,5 +223,5 @@ __marimo__/
 */audio/*.wav
 
 # Flutter app source (the Python template above ignores lib/)
-!voya/lib/
-!voya/windows/runner/runner.exe.manifest
+!senri/lib/
+!senri/windows/runner/runner.exe.manifest

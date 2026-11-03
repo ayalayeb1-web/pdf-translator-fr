@@ -1,0 +1,101 @@
+name: Senri · Windows build
+
+on:
+  push:
+    paths: ["senri/**", ".github/workflows/senri-windows.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: senri
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Unit and widget tests
+        run: flutter test
+
+      - name: Build Windows release (EXE)
+        run: flutter build windows --release
+
+      - name: Integration test in a real Windows window
+        run: flutter test integration_test/app_test.dart -d windows
+
+      - name: Smoke test of the release EXE
+        shell: pwsh
+        run: |
+          $exe = "build\windows\x64\runner\Release\Senri.exe"
+          if (!(Test-Path $exe)) { throw "Senri.exe missing" }
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 12
+          if ($p.HasExited) { throw "Senri.exe exited early with code $($p.ExitCode)" }
+          Write-Host "Senri.exe is running (pid $($p.Id)), memory $([math]::Round($p.WorkingSet64/1MB)) MB"
+          Stop-Process -Id $p.Id -Force
+
+      - name: Installer (Inno Setup → Setup.exe)
+        shell: pwsh
+        run: |
+          if (!(Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup -y --no-progress | Out-Null }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (!$iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc /DAppVersion=0.1.0 installer\senri.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - name: Silent install / uninstall test of Setup.exe
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem build\installer\Senri-Setup-*.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /CURRENTUSER /NORESTART /DIR=`"$env:RUNNER_TEMP\SenriInstall`"" -Wait
+          if (!(Test-Path "$env:RUNNER_TEMP\SenriInstall\Senri.exe")) { throw "Install failed" }
+          Start-Process "$env:RUNNER_TEMP\SenriInstall\unins000.exe" -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait
+          Write-Host "Install + uninstall OK"
+
+      - name: MSIX package
+        run: dart run msix:create --build-windows false
+
+      - name: Portable ZIP
+        shell: pwsh
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath build\Senri-0.1.0-portable-win64.zip -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Senri-Windows
+          path: |
+            senri/build/installer/Senri-Setup-*.exe
+            senri/build/Senri-0.1.0-portable-win64.zip
+            senri/build/windows/x64/runner/Release/*.msix
+
+      - name: Publish pre-release
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'claude/happy-mayer-eb0gcy'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: senri-v0.1.0
+          name: Senri 0.1.0 (Windows, préversion)
+          prerelease: true
+          body: |
+            Préversion Windows de Senri, compilée et testée automatiquement par GitHub Actions.
+            - **Senri-Setup-0.1.0.exe** : installateur recommandé (pas de droits administrateur requis).
+            - **Senri-0.1.0-portable-win64.zip** : version portable, décompresser et lancer Senri.exe.
+            - **Senri.msix** : paquet MSIX signé avec un certificat de test (voir docs/WINDOWS-BUILD.md).
+          files: |
+            senri/build/installer/Senri-Setup-*.exe
+            senri/build/Senri-0.1.0-portable-win64.zip
+            senri/build/windows/x64/runner/Release/*.msix
