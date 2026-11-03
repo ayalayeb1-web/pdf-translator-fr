@@ -39,15 +39,13 @@ jobs:
       - name: Integration test in a real Windows window
         shell: pwsh
         run: |
-          # flutter_tools sometimes fails to delete its temp listener folder *after* the test
-          # (PathNotFoundException during finalization). Judge the test by its own result.
-          $log = flutter test integration_test/app_test.dart -d windows --reporter expanded 2>&1 | Tee-Object -Variable out
-          $text = ($out | Out-String)
-          if ($text -match '\+1: .*real window' -and $text -notmatch '-1: ' -and $text -notmatch 'Some tests failed') {
-            Write-Host "Integration test passed in a real Windows window"
-            exit 0
-          }
-          throw "Integration test failed"
+          # The test writes $env:SENRI_TEST_OK only if all its expectations pass. flutter_tools can
+          # fail its own temp-folder cleanup after a passing test, so the marker is the verdict.
+          $env:SENRI_TEST_OK = "$env:RUNNER_TEMP\senri-integration-ok.txt"
+          flutter test integration_test/app_test.dart -d windows --reporter expanded
+          Write-Host "flutter test exit code: $LASTEXITCODE"
+          if (Test-Path $env:SENRI_TEST_OK) { Get-Content $env:SENRI_TEST_OK; exit 0 }
+          throw "Integration test did not pass"
 
       - name: Smoke test of the release EXE
         shell: pwsh
