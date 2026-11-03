@@ -1,0 +1,15 @@
+{
+  "_note": "Which neural voice reads each accent + profile. Each voice belongs to ONE region, so accents never mix. Elvira, Álvaro, Dalia, Jorge, Salomé and Gonzalo are confirmed Azure voices; check the others in the Azure AI Speech voice gallery before generating. For ElevenLabs, pick native Madrid / Mexico City / Bogotá speakers in its voice library and add entries with engine \"elevenlabs\" and their voice id.",
+  "voices": [
+    { "id": "es-ES-f-soft", "accent": "es-ES", "profile": "f-soft", "engine": "azure", "voice": "es-ES-ElviraNeural", "label": "Azure Elvira (Madrid)" },
+    { "id": "es-ES-f-bright", "accent": "es-ES", "profile": "f-bright", "engine": "azure", "voice": "es-ES-XimenaNeural", "label": "Azure Ximena (Madrid) — verify" },
+    { "id": "es-ES-m-calm", "accent": "es-ES", "profile": "m-calm", "engine": "azure", "voice": "es-ES-AlvaroNeural", "label": "Azure Álvaro (Madrid)" },
+    { "id": "es-ES-m-deep", "accent": "es-ES", "profile": "m-deep", "engine": "azure", "voice": "es-ES-ArnauNeural", "label": "Azure Arnau (Spain) — verify" },
+    { "id": "es-MX-f-soft", "accent": "es-MX", "profile": "f-soft", "engine": "azure", "voice": "es-MX-DaliaNeural", "label": "Azure Dalia (Mexico City)" },
+    { "id": "es-MX-f-bright", "accent": "es-MX", "profile": "f-bright", "engine": "azure", "voice": "es-MX-RenataNeural", "label": "Azure Renata (Mexico) — verify" },
+    { "id": "es-MX-m-calm", "accent": "es-MX", "profile": "m-calm", "engine": "azure", "voice": "es-MX-JorgeNeural", "label": "Azure Jorge (Mexico City)" },
+    { "id": "es-MX-m-deep", "accent": "es-MX", "profile": "m-deep", "engine": "azure", "voice": "es-MX-LibertoNeural", "label": "Azure Liberto (Mexico) — verify" },
+    { "id": "es-CO-f-soft", "accent": "es-CO", "profile": "f-soft", "engine": "azure", "voice": "es-CO-SalomeNeural", "label": "Azure Salomé (Bogotá)" },
+    { "id": "es-CO-m-calm", "accent": "es-CO", "profile": "m-calm", "engine": "azure", "voice": "es-CO-GonzaloNeural", "label": "Azure Gonzalo (Bogotá)" }
+  ]
+}

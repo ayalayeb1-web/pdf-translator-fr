@@ -1,0 +1,9 @@
+{
+  "_note": "Which neural voice reads each accent + profile. Azure names come from the Azure AI Speech voice gallery (Nanami and Keita are confirmed; check the others there before generating). To use ElevenLabs, Google or OpenAI, add entries with that engine and a voice id from that provider, e.g. {\"id\": \"ja-f-soft-11\", \"accent\": \"ja-JP\", \"profile\": \"f-soft\", \"engine\": \"elevenlabs\", \"voice\": \"<voice id of a native Japanese voice from the ElevenLabs voice library>\", \"label\": \"ElevenLabs …\"}.",
+  "voices": [
+    { "id": "ja-f-soft", "accent": "ja-JP", "profile": "f-soft", "engine": "azure", "voice": "ja-JP-NanamiNeural", "label": "Azure Nanami (Tokyo)" },
+    { "id": "ja-f-bright", "accent": "ja-JP", "profile": "f-bright", "engine": "azure", "voice": "ja-JP-AoiNeural", "label": "Azure Aoi (Tokyo) — verify" },
+    { "id": "ja-m-calm", "accent": "ja-JP", "profile": "m-calm", "engine": "azure", "voice": "ja-JP-KeitaNeural", "label": "Azure Keita (Tokyo)" },
+    { "id": "ja-m-deep", "accent": "ja-JP", "profile": "m-deep", "engine": "azure", "voice": "ja-JP-NaokiNeural", "label": "Azure Naoki (Tokyo) — verify" }
+  ]
+}

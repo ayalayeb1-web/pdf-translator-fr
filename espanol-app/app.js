@@ -56,128 +56,33 @@ const dueItems = () => Object.entries(state.srs)
 const mastered = id => (state.srs[id]?.box || 0) >= 4;
 
 // ---------- Audio ----------
-// One robust text-to-speech engine for the whole app. It works around common browser problems:
-//  - iPhone/iPad only speak after a real tap → we "unlock" speech on the first touch;
-//  - Chrome sometimes drops a line spoken right after cancel() → small delay after cancelling;
-//  - utterances can be garbage-collected mid-speech → we keep a reference;
-//  - voices load late → we keep re-checking for a Spanish (Spain) voice.
-const TTS = (() => {
-  const ok = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
-  let voices = [], ja = null, unlocked = false, keep = [], timer = null;
-  // Spanish voices, Spain (es-ES) first, then any other Spanish.
-  const jaOnly = vs => {
-    const es = vs.filter(v => /^es/i.test(v.lang || "") || /spanish|español/i.test(v.name || ""));
-    return [...es.filter(v => /es[-_]ES/i.test(v.lang || "")), ...es.filter(v => !/es[-_]ES/i.test(v.lang || ""))];
-  };
-  // Prefer bright, female voices from Spain (they suit the cute style best).
-  // How human a voice sounds: cloud / neural voices are far more natural than old desktop ones.
-  const quality = v => {
-    const n = (v.name || "").toLowerCase();
-    let q = 0;
-    if (/natural|neural|online|premium|enhanced|wavenet|studio/.test(n)) q += 100;
-    if (/google/.test(n)) q += 60;
-    if (v.localService === false) q += 15;
-    if (/desktop|compact|espeak|mbrola/.test(n)) q -= 40;
-    if (/elvira|ximena|abril|vera|monica|mónica|helena|laura|lucia|lucía|female/.test(n)) q += 5;
-    if (/es[-_]ES/i.test(v.lang || "")) q += 30;
-    return q;
-  };
-  const isNatural = v => !!v && quality(v) >= 60;
-  const pickBest = vs => [...jaOnly(vs)].sort((a, b) => quality(b) - quality(a))[0] || null;
-  // Small, natural shifts only: large pitch changes make synthetic voices sound robotic.
-  const STYLES = {
-    natural: { pitch: 1, rate: 0 }, soft: { pitch: 1.06, rate: -0.06 }, energetic: { pitch: 1.1, rate: 0.08 },
-    calm: { pitch: 0.95, rate: -0.12 }, slow: { pitch: 1, rate: -0.25 }, anime: { pitch: 1.22, rate: 0.04 },
-    cute: { pitch: 1.12, rate: 0.03 }, gentle: { pitch: 1.05, rate: -0.05 }, // older names
-  };
-  const load = () => { if (!ok) return; try { voices = speechSynthesis.getVoices() || []; ja = pickBest(voices); } catch (_) {} };
-  if (ok) {
-    load();
-    try { speechSynthesis.addEventListener("voiceschanged", load); } catch (_) { speechSynthesis.onvoiceschanged = load; }
-    [300, 1000, 2500, 5000].forEach(t => setTimeout(load, t));
-  }
-  const unlock = () => {
-    if (unlocked || !ok) return;
-    unlocked = true;
-    try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "es-ES"; speechSynthesis.speak(u); } catch (_) {}
-  };
-  document.addEventListener("pointerdown", unlock, { capture: true });
-  document.addEventListener("keydown", unlock, { capture: true });
-
-  // character: true → Lía's own voice; otherwise the lesson voice style from settings.
-  function speak(text, { rate = 0.9, pitch = 1, onend, character = false, voiceName } = {}) {
-    const style = STYLES[state.voiceStyle || "natural"] || STYLES.natural;
-    if (character) {
-      const ms = STYLES[state.mascotStyle];
-      if (ms) { pitch = ms.pitch; rate = 0.97 + ms.rate; }
-      else if (state.kitsuStyle === "gentle") { pitch = 1.06; rate = 0.9; } else { pitch = 1.16; rate = Math.max(rate, 1); }
-    } else {
-      pitch = Math.min(2, pitch * style.pitch * (state.voicePitch || 1));
-      rate = Math.max(0.4, (rate + style.rate) * (state.voiceRate || 1));
-    }
-    const chosen = (voiceName && voices.find(v => v.name === voiceName)) || (character && state.mascotVoiceName && voices.find(v => v.name === state.mascotVoiceName))
-      || (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
-    let fired = false;
-    const end = () => { if (!fired) { fired = true; onend?.(); } };
-    if (!ok || !text) { setTimeout(end, 200); return false; }
-    clearTimeout(timer);
-    // No voice for this language: the browser would read it with its default voice
-    // (e.g. a French one, with a French accent). Don't do that; explain how to fix it instead.
-    if (!chosen) { setTimeout(end, 200); if (typeof noVoiceNotice === "function") noVoiceNotice(voices.length); return false; }
-    // Long text is read sentence by sentence with a short breath in between.
-    const raw = text.length > 28 ? text.split(/(?<=[。！？!?…]|[.](?=\s))\s*/).map(t => t.trim()).filter(Boolean) : [text];
-    // Keep very short pieces together ("¡Hola! ¡Soy Lía!") so speech doesn't sound choppy.
-    const parts = raw.reduce((acc, t) => { const last = acc[acc.length - 1]; if (last !== undefined && (last.length < 14 || t.length < 6)) acc[acc.length - 1] = last + " " + t; else acc.push(t); return acc; }, []);
-    let idx = 0;
-    const go = () => {
-      if (idx >= parts.length) return end();
-      try {
-        const u = new SpeechSynthesisUtterance(parts[idx++]);
-        u.lang = (chosen && chosen.lang) || "es-ES"; u.rate = rate; u.pitch = pitch;
-        if (chosen) u.voice = chosen;
-        u.onend = () => { keep = keep.filter(x => x !== u); if (idx < parts.length) timer = setTimeout(go, 170); else end(); };
-        u.onerror = () => { keep = keep.filter(x => x !== u); end(); };
-        keep.push(u);
-        if (speechSynthesis.paused) speechSynthesis.resume();
-        speechSynthesis.speak(u);
-      } catch (_) { end(); }
-    };
-    if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); timer = setTimeout(go, 90); } else go();
-    setTimeout(end, 1800 + parts.length * 250 + text.length * 260 / rate);
-    return true;
-  }
-  return {
-    speak,
-    cancel: () => { if (ok) { clearTimeout(timer); speechSynthesis.cancel(); } },
-    status: () => { load(); return { supported: ok, voices: voices.length, ja: ja ? `${ja.name} (${ja.lang})` : null }; },
-    list: () => { load(); return [...jaOnly(voices)].sort((a, b) => quality(b) - quality(a)); },
-    current: () => { load(); return ((state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja)?.name || ""; },
-    isNatural, quality, STYLES,
-    currentFor: character => { load(); return ((character && state.mascotVoiceName && voices.find(v => v.name === state.mascotVoiceName)) || (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja)?.name || ""; },
-  };
-})();
+// Text-to-speech lives in voice-engine.js (TTS), configured per language in voice-config.js.
 let jaVoice = null; // kept for older call sites; TTS picks the voice now
 
 let voiceWarned = false;
 function speak(text) { TTS.speak(text); }
 
-// Shown once per visit when the browser has no Spanish voice at all.
-function noVoiceNotice(voiceCount) {
+// Shown once per visit when the browser has no voice for the chosen accent. Never falls back
+// to another language's voice (a French voice reading Spanish is what we're avoiding).
+function noVoiceNotice(langVoiceCount) {
   if (voiceWarned || document.querySelector(".novoice")) return;
   voiceWarned = true;
-  const inApp = /Electron|Claude/i.test(navigator.userAgent);
+  const acc = TTS.accent(), inApp = /Electron|Claude/i.test(navigator.userAgent);
+  const alt = VOICE_ACCENTS.filter(a => a.id !== acc.id && TTS.accentVoices(a).length);
   const w = document.createElement("div");
   w.className = "modal novoice";
-  w.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-label="No Spanish voice">
+  w.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-label="No voice for this accent">
     <div style="font-size:2.4rem;text-align:center">🔇</div>
-    <b style="font-size:1.1rem;text-align:center">No Spanish (Spain) voice in this browser</b>
-    <p style="margin:0;line-height:1.5">${voiceCount ? "This browser only has voices for other languages, so it would read Spanish with the wrong accent (for example a French voice). I've muted it instead." : "This browser has no voices at all."}</p>
-    <p style="margin:0;line-height:1.5"><b>Fix it in one minute:</b> open this page in <b>Microsoft Edge</b> or <b>Google Chrome</b>${inApp ? " (not inside the Claude app)" : ""}. They include real Spanish (Spain) voices for free.</p>
-    <button class="btn" id="nvStudio">🎚️ Open the voice studio</button>
+    <b style="font-size:1.1rem;text-align:center">No ${acc.flag} ${esc(acc.name)} voice in this browser</b>
+    <p style="margin:0;line-height:1.5">${langVoiceCount ? "Using a voice from another region or language would give the wrong accent, so I've muted it instead." : "This browser has no voice for this language, so the computer's default voice would read it with a foreign accent. I've muted it instead."}</p>
+    <p style="margin:0;line-height:1.5"><b>Best fix:</b> open this page in <b>Microsoft Edge</b>${inApp ? " (not inside the Claude app)" : ""}. It includes free neural voices for every accent in this app.</p>
+    ${alt.map(a => `<button class="btn secondary" data-alt="${a.id}">Use ${a.flag} ${esc(a.name)} instead</button>`).join("")}
+    <button class="btn" id="nvStudio">🎚️ Voice settings</button>
     <button class="btn secondary" id="nvOk">OK</button></div>`;
   document.body.append(w);
   w.querySelector("#nvOk").onclick = () => w.remove();
   w.querySelector("#nvStudio").onclick = () => { w.remove(); openVoiceStudio("lesson"); };
+  w.querySelectorAll("[data-alt]").forEach(b => b.onclick = () => { state.accent = b.dataset.alt; save(); w.remove(); voiceWarned = false; toast(`Accent: ${TTS.accent().flag} ${TTS.accent().name}`); });
 }
 
 // ---------- Helpers ----------
@@ -466,10 +371,12 @@ function renderProfile() {
       <div class="voice-styles two">${[["cheerful", "☀️", "Cheerful"], ["gentle", "🌙", "Gentle & polite"]].map(([k, ic, l]) =>
         `<button class="vstyle ${(state.kitsuStyle || "cheerful") === k ? "active" : ""}" data-kitsu="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
       <div class="voice-now">
-        <div><small class="muted">Lesson voice</small><b>${esc(TTS.currentFor(false) ? voiceShortName(TTS.currentFor(false)) : "None found")}</b></div>
-        <div><small class="muted">Style</small><b>${esc((VOICE_PRESETS.find(p => p[0] === (state.voiceStyle || "natural")) || VOICE_PRESETS[0])[2])}</b></div>
+        <div><small class="muted">Accent</small><b>${TTS.accent().flag} ${esc(TTS.accent().name)}</b></div>
+        <div><small class="muted">Voice</small><b>${esc(TTS.currentFor(false) ? voiceShortName(TTS.currentFor(false)) : "None in this browser")}</b></div>
+        <div><small class="muted">Profile</small><b>${esc((VOICE_PROFILES.find(p => p.id === (state.voiceProfile || "f-soft")) || VOICE_PROFILES[0]).name)}</b></div>
+        <div><small class="muted">Mode</small><b>${esc((VOICE_MODES.find(m => m.id === (state.voiceMode || "natural")) || VOICE_MODES[1]).name)}</b></div>
       </div>
-      <button class="btn" id="openStudio" style="margin:10px 0">🎚️ Voice studio: choose your voice</button>
+      <div class="tr-actions" style="margin:10px 0"><button class="btn" id="openStudio">🎚️ Voice settings</button><button class="btn secondary" id="openLab">🧪 Voice lab</button></div>
       <div class="tr-actions"><button class="btn" id="testVoice">🔊 Lesson voice</button><button class="btn secondary" id="testKitsu">🐾 Lía</button></div>
       <div id="voiceDiag"></div>
     </div>
@@ -483,6 +390,7 @@ function renderProfile() {
   document.getElementById("openNotes").onclick = () => setTab("notes");
   bindBadges($view);
   document.getElementById("openStudio").onclick = () => openVoiceStudio("lesson");
+  document.getElementById("openLab").onclick = () => openVoiceLab();
   $view.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
     state.voiceStyle = b.dataset.style; save();
     $view.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("active", x === b));

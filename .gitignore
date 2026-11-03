@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated test audio (real recordings are committed explicitly)
+*/audio/*.wav
