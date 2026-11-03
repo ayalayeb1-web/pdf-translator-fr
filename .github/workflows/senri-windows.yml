@@ -47,7 +47,7 @@ jobs:
           $env:SENRI_TEST_OK = "$env:RUNNER_TEMP\senri-integration-ok.txt"
           foreach ($attempt in 1..2) {
             Write-Host "--- attempt $attempt"
-            flutter test integration_test/app_test.dart -d windows --reporter expanded
+            flutter test integration_test/app_test.dart -d windows --reporter expanded 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\itest-$attempt.log" -Append
             Write-Host "flutter test exit code: $LASTEXITCODE"
             if (Test-Path $env:SENRI_TEST_OK) { Get-Content $env:SENRI_TEST_OK; exit 0 }
           }
@@ -96,7 +96,12 @@ jobs:
           $line = "Real-window integration test: ${{ steps.itest.outcome }}"
           Write-Host $line
           "### Senri Windows build`n- $line" | Out-File -Append $env:GITHUB_STEP_SUMMARY
-          if ("${{ steps.itest.outcome }}" -ne "success") { Write-Host "::warning::Integration test did not pass on this run" }
+          if ("${{ steps.itest.outcome }}" -ne "success") {
+            Write-Host "::warning::Integration test did not pass on this run"
+            Get-ChildItem "$env:RUNNER_TEMP\itest-*.log" -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "===== $($_.Name)"; Get-Content $_.FullName -Tail 80 | Select-String -NotMatch '^\s*$' | ForEach-Object { Write-Host $_ }
+            }
+          }
 
       - uses: actions/upload-artifact@v4
         with:
