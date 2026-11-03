@@ -70,12 +70,22 @@ const TTS = (() => {
     return [...es.filter(v => /es[-_]ES/i.test(v.lang || "")), ...es.filter(v => !/es[-_]ES/i.test(v.lang || ""))];
   };
   // Prefer bright, female voices from Spain (they suit the cute style best).
-  const pickBest = vs => {
-    const j = jaOnly(vs), spain = j.filter(v => /es[-_]ES/i.test(v.lang || ""));
-    return spain.find(v => /elvira|ximena|abril|lia|vera|monica|mónica|helena|laura|lucia|lucía|female/i.test(v.name))
-      || spain.find(v => /google/i.test(v.name)) || spain[0] || j[0] || null;
+  // How human a voice sounds: cloud / neural voices are far more natural than old desktop ones.
+  const quality = v => {
+    const n = (v.name || "").toLowerCase();
+    let q = 0;
+    if (/natural|neural|online|premium|enhanced|wavenet|studio/.test(n)) q += 100;
+    if (/google/.test(n)) q += 60;
+    if (v.localService === false) q += 15;
+    if (/desktop|compact|espeak|mbrola/.test(n)) q -= 40;
+    if (/elvira|ximena|abril|vera|monica|mónica|helena|laura|lucia|lucía|female/.test(n)) q += 5;
+    if (/es[-_]ES/i.test(v.lang || "")) q += 30;
+    return q;
   };
-  const STYLES = { cute: { pitch: 1.45, rate: 0.06 }, gentle: { pitch: 1.28, rate: -0.07 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.88, rate: -0.08 } };
+  const isNatural = v => !!v && quality(v) >= 60;
+  const pickBest = vs => [...jaOnly(vs)].sort((a, b) => quality(b) - quality(a))[0] || null;
+  // Small, natural shifts only: large pitch changes make synthetic voices sound robotic.
+  const STYLES = { cute: { pitch: 1.12, rate: 0.03 }, gentle: { pitch: 1.05, rate: -0.05 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.96, rate: -0.08 } };
   const load = () => { if (!ok) return; try { voices = speechSynthesis.getVoices() || []; ja = pickBest(voices); } catch (_) {} };
   if (ok) {
     load();
@@ -92,9 +102,9 @@ const TTS = (() => {
 
   // character: true → Lía's own voice; otherwise the lesson voice style from settings.
   function speak(text, { rate = 0.9, pitch = 1, onend, character = false } = {}) {
-    const style = STYLES[state.voiceStyle || "cute"] || STYLES.cute;
+    const style = STYLES[state.voiceStyle || "natural"] || STYLES.natural;
     if (character) {
-      if (state.kitsuStyle === "gentle") { pitch = 1.35; rate = 0.86; } else { pitch = 1.75; rate = Math.max(rate, 1.02); }
+      if (state.kitsuStyle === "gentle") { pitch = 1.06; rate = 0.9; } else { pitch = 1.16; rate = Math.max(rate, 1); }
     }
     else { pitch = Math.min(2, pitch * style.pitch); rate = Math.max(0.4, rate + style.rate); }
     const chosen = (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
@@ -102,26 +112,35 @@ const TTS = (() => {
     const end = () => { if (!fired) { fired = true; onend?.(); } };
     if (!ok || !text) { setTimeout(end, 200); return false; }
     clearTimeout(timer);
+    // Long text is read sentence by sentence with a short breath in between.
+    const raw = text.length > 28 ? text.split(/(?<=[。！？!?…]|[.](?=\s))\s*/).map(t => t.trim()).filter(Boolean) : [text];
+    // Keep very short pieces together ("¡Hola! ¡Soy Lía!") so speech doesn't sound choppy.
+    const parts = raw.reduce((acc, t) => { const last = acc[acc.length - 1]; if (last !== undefined && (last.length < 14 || t.length < 6)) acc[acc.length - 1] = last + " " + t; else acc.push(t); return acc; }, []);
+    let idx = 0;
     const go = () => {
+      if (idx >= parts.length) return end();
       try {
-        const u = new SpeechSynthesisUtterance(text);
+        const u = new SpeechSynthesisUtterance(parts[idx++]);
         u.lang = (chosen && chosen.lang) || "es-ES"; u.rate = rate; u.pitch = pitch;
         if (chosen) u.voice = chosen;
-        u.onend = u.onerror = () => { keep = keep.filter(x => x !== u); end(); };
+        u.onend = () => { keep = keep.filter(x => x !== u); if (idx < parts.length) timer = setTimeout(go, 170); else end(); };
+        u.onerror = () => { keep = keep.filter(x => x !== u); end(); };
         keep.push(u);
         if (speechSynthesis.paused) speechSynthesis.resume();
         speechSynthesis.speak(u);
       } catch (_) { end(); }
     };
     if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); timer = setTimeout(go, 90); } else go();
-    setTimeout(end, 1800 + text.length * 260 / rate);
+    setTimeout(end, 1800 + parts.length * 250 + text.length * 260 / rate);
     return true;
   }
   return {
     speak,
     cancel: () => { if (ok) { clearTimeout(timer); speechSynthesis.cancel(); } },
     status: () => { load(); return { supported: ok, voices: voices.length, ja: ja ? `${ja.name} (${ja.lang})` : null }; },
-    list: () => { load(); return jaOnly(voices); },
+    list: () => { load(); return [...jaOnly(voices)].sort((a, b) => quality(b) - quality(a)); },
+    current: () => { load(); return ((state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja)?.name || ""; },
+    isNatural,
   };
 })();
 let jaVoice = null; // kept for older call sites; TTS picks the voice now
@@ -424,13 +443,16 @@ function renderProfile() {
         `<button class="vstyle ${(state.kitsuStyle || "cheerful") === k ? "active" : ""}" data-kitsu="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
       <p style="margin:14px 0 6px;font-weight:800">Lesson voice</p>
       <div class="voice-styles four">${[["cute", "🌸", "Cute"], ["gentle", "🌙", "Gentle"], ["natural", "🎙️", "Natural"], ["calm", "🍵", "Calm"]].map(([k, ic, l]) =>
-        `<button class="vstyle ${(state.voiceStyle || "cute") === k ? "active" : ""}" data-style="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
+        `<button class="vstyle ${(state.voiceStyle || "natural") === k ? "active" : ""}" data-style="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
       <p class="muted" style="font-size:.8rem;margin:6px 0 10px">How words and sentences sound in lessons. Lía's own voice follows her personality. Natural is best for copying real pronunciation.</p>
-      ${TTS.list().length > 1 ? `<label class="field"><span>Spanish voice on this device</span>
-        <select id="voicePick" class="type-input" style="margin:0">
-          <option value="">Automatic</option>
-          ${TTS.list().map(v => `<option value="${esc(v.name)}" ${state.ttsVoice === v.name ? "selected" : ""}>${esc(v.name)}</option>`).join("")}
-        </select></label>` : ""}
+      ${(() => {
+        const vs = TTS.list(), cur = TTS.current();
+        if (!vs.length) return "";
+        const tip = !TTS.isNatural(vs[0]) ? `<div class="voice-tip">🤖 The voices on this device sound robotic. For a natural, human voice, open this app in <b>Microsoft Edge</b> (free natural voices) or <b>Google Chrome</b>.</div>` : "";
+        return `${tip}<p style="margin:14px 0 6px;font-weight:800">Voices on this device <small class="muted">tap to try</small></p>
+          <div class="voice-list">${vs.slice(0, 8).map(v => `<button class="voice-row ${v.name === cur ? "on" : ""}" data-voice="${esc(v.name)}">
+            <span class="vr-name">${esc(v.name)}</span><span class="vr-badge ${TTS.isNatural(v) ? "nat" : "rob"}">${TTS.isNatural(v) ? "✨ Natural" : "🤖 Robotic"}</span></button>`).join("")}</div>`;
+      })()}
       <div class="tr-actions"><button class="btn" id="testVoice">🔊 Lesson voice</button><button class="btn secondary" id="testKitsu">🐾 Lía</button></div>
       <div id="voiceDiag"></div>
     </div>
@@ -447,7 +469,11 @@ function renderProfile() {
     $view.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("active", x === b));
     TTS.speak("¡Hola! ¿Aprendemos español juntos?", { rate: 0.95 });
   });
-  document.getElementById("voicePick")?.addEventListener("change", e => { state.ttsVoice = e.target.value; save(); TTS.speak("¿Qué te parece esta voz?", { rate: 0.95 }); });
+  $view.querySelectorAll("[data-voice]").forEach(b => b.onclick = () => {
+    state.ttsVoice = b.dataset.voice; save();
+    $view.querySelectorAll("[data-voice]").forEach(x => x.classList.toggle("on", x === b));
+    TTS.speak("¿Qué te parece esta voz?", { rate: 0.95 });
+  });
   $view.querySelectorAll("[data-kitsu]").forEach(b => b.onclick = () => {
     state.kitsuStyle = b.dataset.kitsu; save();
     $view.querySelectorAll("[data-kitsu]").forEach(x => x.classList.toggle("active", x === b));

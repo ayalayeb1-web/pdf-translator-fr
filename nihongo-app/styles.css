@@ -636,3 +636,14 @@ body.in-lesson main { padding-bottom: 24px; }
 .btn.auto::after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: 100%; background: rgba(255,255,255,.85); transform-origin: left; animation: autoFill var(--ms, 1.5s) linear forwards; }
 .btn.secondary.auto::after { background: var(--pink); }
 @keyframes autoFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* Voice list */
+.voice-tip { margin-top: 12px; padding: 10px 12px; border-radius: 14px; font-size: .88rem; line-height: 1.45; background: color-mix(in srgb, var(--gold) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--gold) 40%, var(--border)); }
+.voice-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.voice-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); font: inherit; color: var(--text); cursor: pointer; transition: transform .2s var(--spring), border-color .2s; }
+.voice-row:hover { transform: translateY(-1px); }
+.voice-row.on { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 10%, var(--card)); }
+.vr-name { font-weight: 700; font-size: .88rem; min-width: 0; overflow-wrap: anywhere; }
+.vr-badge { flex: none; font-size: .72rem; font-weight: 900; padding: 3px 8px; border-radius: 99px; }
+.vr-badge.nat { background: color-mix(in srgb, var(--green) 16%, var(--card)); color: var(--green); }
+.vr-badge.rob { background: var(--border); color: var(--muted); }
