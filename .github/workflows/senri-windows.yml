@@ -89,6 +89,15 @@ jobs:
       - name: MSIX package
         run: dart run msix:create --build-windows false
 
+      - name: Test report
+        if: always()
+        shell: pwsh
+        run: |
+          $line = "Real-window integration test: ${{ steps.itest.outcome }}"
+          Write-Host $line
+          "### Senri Windows build`n- $line" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+          if ("${{ steps.itest.outcome }}" -ne "success") { Write-Host "::warning::Integration test did not pass on this run" }
+
       - uses: actions/upload-artifact@v4
         with:
           name: Senri-Windows
