@@ -173,6 +173,7 @@ function renderJourney() {
       </div>
     </section>
     ${Mascot.homeCard()}
+    ${dailyPlanHtml()}
     <div class="tools-row stagger">
       ${!state.placement && nothingDone ? `<button class="tool-chip hot" id="placeBtn">🎯 Find my level</button>` : ""}
       ${due ? `<button class="tool-chip" id="dueBtn">🔁 ${due} to review</button>` : ""}
@@ -211,6 +212,7 @@ function renderJourney() {
 
   // wiring
   Mascot.bindTap($view);
+  bindDailyPlan($view);
   $view.querySelectorAll("[data-level]").forEach(b => b.onclick = () => { if (b.dataset.level !== level.id) flyToLevel(b.dataset.level); });
   $view.querySelectorAll("#placeBtn").forEach(b => b.onclick = startPlacement);
   document.getElementById("dueBtn")?.addEventListener("click", () => setTab("review"));

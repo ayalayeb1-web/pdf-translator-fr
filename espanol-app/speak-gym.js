@@ -93,6 +93,7 @@ function shadowSession(phrases, title) {
   const finish = () => {
     const pct = Math.round(100 * nailed / phrases.length);
     addXp(8 + phrases.length * 2);
+    logActivity("speak");
     swapView(() => {
       $view.innerHTML = `<div class="lesson done"><h2>Shadowing done!</h2>${Mascot.finish(Math.max(pct, 60))}
         <div class="done-stats"><div class="card"><b>${phrases.length}</b>phrases</div><div class="card"><b>${nailed}</b>nailed</div><div class="card"><b>+${8 + phrases.length * 2}</b>XP</div></div>
@@ -234,6 +235,7 @@ function earTraining() {
   const end = () => {
     const pct = Math.round(100 * right / qs.length);
     addXp(5 + right);
+    logActivity("speak");
     swapView(() => {
       $view.innerHTML = `<div class="lesson done"><h2>Ear training done!</h2>${Mascot.finish(pct)}
         <div class="done-stats"><div class="card"><b>${right}/${qs.length}</b>heard right</div><div class="card"><b>+${5 + right}</b>XP</div></div>
@@ -311,6 +313,7 @@ Reply with only JSON: {"score": 0-100 (task completed + correctness + naturalnes
   } catch (_) { /* no AI: show the example instead */ }
   const m2 = state.missions[today()]; if (m2) { m2.done = true; save(); }
   addXp(20); Mascot.sfx("finish");
+  logActivity("speak");
   const natural = fb?.natural?.jp ? fb.natural : m.example;
   const score = fb ? Math.max(0, Math.min(100, Number(fb.score) || 0)) : null;
   if (score !== null && score >= 70) Mascot.confetti();

@@ -261,6 +261,7 @@ function conjDrill(qs) {
   const finish = () => {
     const pct = Math.round(100 * right / qs.length);
     addXp(6 + right);
+    logActivity("drill", { accuracy: pct, bestCombo: combo });
     swapView(() => {
       $view.innerHTML = `<div class="lesson done"><h2>Drill complete!</h2>${Mascot.finish(pct)}
         <div class="done-stats"><div class="card"><b>${right}/${qs.length}</b>correct</div><div class="card"><b>${pct}%</b>accuracy</div><div class="card"><b>+${6 + right}</b>XP</div></div>

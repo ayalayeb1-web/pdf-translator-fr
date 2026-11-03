@@ -482,6 +482,7 @@ function renderProfile() {
       <div class="row-list"><span>🈶 Kanji mastered</span><b>${kanjiKnown}</b></div>
       <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
     </div>
+    ${badgesCardHtml()}
     <button class="card notes-entry" id="openNotes"><span>📝 <b>My notes</b></span><span class="muted">${Object.keys(state.notes || {}).length} notes →</span></button>
     <div class="card voice-test">
       <b>🔊 Voice</b>
@@ -506,6 +507,7 @@ function renderProfile() {
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
   document.getElementById("openNotes").onclick = () => setTab("notes");
+  bindBadges($view);
   document.getElementById("openStudio").onclick = () => openVoiceStudio("lesson");
   $view.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
     state.voiceStyle = b.dataset.style; save();
@@ -868,6 +870,7 @@ function finishSession(s) {
   const xp = (s.review ? 5 : 10) + Math.round(accuracy / 10);
   if (s.lesson) state.completed[s.lesson.id] = true;
   addXp(xp);
+  logActivity(s.review ? "review" : "lesson", { accuracy, bestCombo: s.bestCombo });
   $view.innerHTML = `<div class="lesson done">
     <h2>${s.review ? "Review complete!" : "Lesson complete!"}</h2>
     <p class="muted">${esc(s.title)}</p>

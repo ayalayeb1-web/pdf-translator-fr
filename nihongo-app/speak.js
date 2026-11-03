@@ -257,6 +257,7 @@ function runScenario(sc) {
     state.speak[sc.id] = Math.max(state.speak[sc.id] || 0, avg);
     const xp = 5 + Math.round(avg / 10);
     addXp(xp);
+    logActivity("speak");
     Mascot.sfx("finish"); if (avg >= 75) Mascot.confetti();
     document.getElementById("hints").innerHTML = "";
     document.getElementById("controls").innerHTML = `

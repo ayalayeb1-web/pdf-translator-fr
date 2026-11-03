@@ -730,3 +730,42 @@ body.in-lesson main { padding-bottom: 24px; }
 .voice-now { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .voice-now > div { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 14px; background: var(--bg); min-width: 0; }
 .voice-now b { overflow-wrap: anywhere; }
+
+/* Daily plan */
+.plan-card { display: flex; flex-direction: column; gap: 10px; }
+.plan-card.complete { border-color: color-mix(in srgb, var(--gold) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 20%, transparent), var(--shadow); }
+.plan-head { display: flex; align-items: center; gap: 12px; }
+.plan-head > div:last-child { display: flex; flex-direction: column; }
+.plan-title { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; }
+.plan-ring { position: relative; width: 48px; height: 48px; flex: none; display: grid; place-items: center; }
+.plan-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.plan-ring b { font-size: .8rem; font-variant-numeric: tabular-nums; }
+.ring-bg2 { fill: none; stroke: var(--border); stroke-width: 5; }
+.ring-fg2 { fill: none; stroke: var(--pink); stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s var(--smooth); }
+.plan-items { display: flex; flex-direction: column; gap: 6px; }
+.plan-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); font: inherit; font-size: .9rem; color: var(--text); cursor: pointer; transition: transform .2s var(--spring); }
+.plan-item:hover { transform: translateX(3px); }
+.plan-item.done { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 50%, transparent); }
+.pi-check { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--border); font-size: .9rem; }
+.plan-item.done .pi-check { background: var(--green); border-color: var(--green); color: #fff; font-weight: 900; }
+/* Badges */
+.bc-head { display: flex; justify-content: space-between; align-items: baseline; }
+.week-vs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 12px; }
+.week-vs > div { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 12px; background: var(--bg); }
+.week-vs .up b { color: var(--green); } .week-vs .down b { color: var(--red); }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.badge { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 8px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg); font: inherit; color: var(--text); cursor: pointer; min-width: 0; transition: transform .2s var(--spring); }
+.badge:hover { transform: translateY(-2px); }
+.badge small { font-size: .66rem; font-weight: 800; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+.bg-icon { font-size: 1.6rem; filter: grayscale(1); opacity: .45; }
+.badge.have { background: color-mix(in srgb, var(--gold) 14%, var(--card)); border-color: color-mix(in srgb, var(--gold) 50%, var(--border)); }
+.badge.have .bg-icon { filter: none; opacity: 1; animation: pop .6s var(--spring); }
+.bg-bar { width: 80%; height: 4px; border-radius: 99px; background: var(--border); overflow: hidden; }
+.bg-bar span { display: block; height: 100%; background: var(--pink); }
+.celebrate-box { text-align: center; align-items: center; }
+.cb-icon { font-size: 4rem; animation: pop .7s var(--spring); }
+.cb-title { font-family: var(--font-display); font-weight: 400; font-size: 1.4rem; }
+
+.plan-items { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.plan-item { padding: 8px; font-size: .85rem; font-weight: 700; }
+.plan-card { gap: 8px; padding: 14px; }

@@ -459,6 +459,7 @@ Reply with only JSON: {"score": 0-100 (meaning matters, not wording), "feedback"
     const pct = Math.round(100 * right / order.length);
     v.steps.quiz = true; v.best = Math.max(v.best || 0, pct); save();
     addXp(10 + Math.round(pct / 5));
+    logActivity("video");
     stage.innerHTML = `<div class="done" style="padding-top:10px">${Mascot.finish(pct)}<p><b>${right}/${order.length}</b> correct · +${10 + Math.round(pct / 5)} XP</p>
       <div class="tr-actions"><button class="btn secondary" id="again">Try again</button><button class="btn" id="lib">Back to videos</button></div></div>`;
     Mascot.bindTap(stage);
