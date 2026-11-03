@@ -34,8 +34,17 @@ class Speech {
   double normalRate = 0.5; // flutter_tts scale: 0.5 ≈ the voice's natural pace on Windows
   double slowRate = 0.32;
   Completer<void>? _done;
+  bool _busy = false;
+
+  /// Build with --dart-define=SENRI_NO_TTS=true to disable native speech (diagnostics / CI).
+  static const disabled = bool.fromEnvironment('SENRI_NO_TTS');
 
   Future<void> init() async {
+    if (disabled) {
+      available = false;
+      error = 'Synthèse vocale désactivée pour ce build';
+      return;
+    }
     try {
       final tts = FlutterTts();
       tts.setCompletionHandler(_finished);
@@ -96,7 +105,10 @@ class Speech {
   Future<void> speak(String text, {bool slow = false}) async {
     final tts = _tts;
     if (tts == null || text.trim().isEmpty) return;
+    if (_busy) return;
+    _busy = true;
     await stop();
+    _busy = false;
     nowPlaying.value = NowPlaying(text: text, playing: true, slow: slow);
     _done = Completer<void>();
     try {
@@ -116,9 +128,10 @@ class Speech {
   }
 
   Future<void> stop() async {
+    if (!nowPlaying.value.playing) return; // calling the native stop() while idle is unsafe on some platforms
     try {
       await _tts?.stop();
     } catch (_) {}
-    if (nowPlaying.value.playing) _finished();
+    _finished();
   }
 }

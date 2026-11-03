@@ -47,9 +47,16 @@ jobs:
           $env:SENRI_TEST_OK = "$env:RUNNER_TEMP\senri-integration-ok.txt"
           foreach ($attempt in 1..2) {
             Write-Host "--- attempt $attempt"
-            flutter test integration_test/app_test.dart -d windows --reporter expanded 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\itest-$attempt.log" -Append
+            $extra = @()
+            if ($attempt -eq 2) { $extra = @('--dart-define=SENRI_NO_TTS=true') }
+            Write-Host "extra args: $extra"
+            flutter test integration_test/app_test.dart -d windows --reporter expanded @extra 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\itest-$attempt.log" -Append
             Write-Host "flutter test exit code: $LASTEXITCODE"
-            if (Test-Path $env:SENRI_TEST_OK) { Get-Content $env:SENRI_TEST_OK; exit 0 }
+            if (Test-Path $env:SENRI_TEST_OK) {
+              Get-Content $env:SENRI_TEST_OK
+              if ($attempt -eq 1) { exit 0 }
+              throw "Passed only with speech disabled: native text-to-speech is the culprit"
+            }
           }
           throw "Integration test did not pass"
 
