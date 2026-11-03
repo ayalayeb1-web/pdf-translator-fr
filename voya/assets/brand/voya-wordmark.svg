@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 512" width="1400" height="512">
+  <title>Voya</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#232A3D"/><stop offset="1" stop-color="#12151F"/></linearGradient>
+    <linearGradient id="path" x1="100" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF6A4D"/><stop offset="1" stop-color="#F4A93B"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#tile)"/>
+  <path d="M118 150 C150 150 176 172 196 214 L242 330 C248 346 264 346 270 330 L330 176" fill="none" stroke="url(#path)" stroke-width="50" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="378" cy="136" r="34" fill="#FFF3E2"/><circle cx="378" cy="136" r="14" fill="#F4A93B"/>
+  <text x="600" y="345" font-family="Fraunces, Georgia, serif" font-size="300" font-weight="500" letter-spacing="-8" fill="#1A1E29">Voya</text>
+</svg>
