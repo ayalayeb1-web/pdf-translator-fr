@@ -370,103 +370,7 @@ function renderChart() {
   });
 }
 
-function renderProfile() {
-  const days = [...Array(7)].map((_, i) => {
-    const d = new Date(Date.now() - (6 - i) * DAY);
-    const key = d.toISOString().slice(0, 10);
-    return { label: d.toLocaleDateString(undefined, { weekday: "short" }), xp: state.daily[key] || 0 };
-  });
-  const max = Math.max(DAILY_GOAL, ...days.map(d => d.xp));
-  const cards = Object.values(state.srs);
-  const seen = cards.reduce((a, c) => a + c.seen, 0);
-  const acc = seen ? Math.round(100 * cards.reduce((a, c) => a + c.right, 0) / seen) : 0;
-  const kanjiKnown = Object.keys(state.srs).filter(id => id.startsWith("kanji:") && mastered(id)).length;
-  const wordsKnown = Object.keys(state.srs).filter(id => id.startsWith("vocab:") && mastered(id)).length;
-  $view.innerHTML = `
-    <h2>Progress</h2>
-    <div class="done-stats">
-      <div class="card"><b>🔥 ${currentStreak()}</b>day streak</div>
-      <div class="card"><b>⭐ ${state.xp}</b>total XP</div>
-    </div>
-    <div class="card">
-      <b>This week</b>
-      <div class="week" style="margin-top:12px">${days.map(d =>
-        `<div><div class="bar" style="height:${d.xp / max * 80}px"></div>${d.label}</div>`).join("")}</div>
-    </div>
-    <div class="card">
-      <b>Levels</b>
-      ${LEVELS.map(l => {
-        const all = lessonsOf(l); const done = all.filter(x => state.completed[x.id]).length;
-        return `<div class="row-list"><span>${l.id} · ${esc(l.name)} <span class="muted">(${l.jlpt})</span></span><b>${done}/${all.length}</b></div>`;
-      }).join("")}
-    </div>
-    <div class="card">
-      <div class="row-list"><span>📚 Words mastered</span><b>${wordsKnown}</b></div>
-      <div class="row-list"><span>🈶 Kanji mastered</span><b>${kanjiKnown}</b></div>
-      <div class="row-list"><span>🎯 Review accuracy</span><b>${acc}%</b></div>
-    </div>
-    ${badgesCardHtml()}
-    <button class="card notes-entry" id="openNotes"><span>📝 <b>My notes</b></span><span class="muted">${Object.keys(state.notes || {}).length} notes →</span></button>
-    <div class="card voice-test">
-      <b>🔊 Voice</b>
-      <p class="muted" style="margin:6px 0 10px">Can't hear Kitsu or the lessons? Tap the button and check what it says below.</p>
-      <p style="margin:4px 0 6px;font-weight:800">Kitsu's personality</p>
-      <div class="voice-styles two">${[["cheerful", "☀️", "Cheerful"], ["gentle", "🌙", "Gentle & polite"]].map(([k, ic, l]) =>
-        `<button class="vstyle ${(state.kitsuStyle || "cheerful") === k ? "active" : ""}" data-kitsu="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
-      <div class="voice-now">
-        <div><small class="muted">Accent</small><b>${TTS.accent().flag} ${esc(TTS.accent().name)}</b></div>
-        <div><small class="muted">Voice</small><b>${esc(TTS.currentFor(false) ? voiceShortName(TTS.currentFor(false)) : "None in this browser")}</b></div>
-        <div><small class="muted">Profile</small><b>${esc((VOICE_PROFILES.find(p => p.id === (state.voiceProfile || "f-soft")) || VOICE_PROFILES[0]).name)}</b></div>
-        <div><small class="muted">Mode</small><b>${esc((VOICE_MODES.find(m => m.id === (state.voiceMode || "natural")) || VOICE_MODES[1]).name)}</b></div>
-      </div>
-      <div class="tr-actions" style="margin:10px 0"><button class="btn" id="openStudio">🎚️ Voice settings</button><button class="btn secondary" id="openLab">🧪 Voice lab</button></div>
-      <div class="tr-actions"><button class="btn" id="testVoice">🔊 Lesson voice</button><button class="btn secondary" id="testKitsu">🦊 Kitsu</button></div>
-      <div id="voiceDiag"></div>
-    </div>
-    <div class="card">
-      <b>Settings</b>
-      <label class="toggle-row" for="optVoice"><span>🦊 Kitsu speaks out loud</span><input type="checkbox" id="optVoice" ${state.voice !== false ? "checked" : ""}></label>
-      <label class="toggle-row" for="optAuto"><span>⚡ Auto-check &amp; next</span><input type="checkbox" id="optAuto" ${state.autoNext !== false ? "checked" : ""}></label>
-      <label class="toggle-row" for="optSfx"><span>🔔 Sound effects</span><input type="checkbox" id="optSfx" ${state.sfx !== false ? "checked" : ""}></label>
-      <label class="toggle-row" for="optFuri"><span>あ Furigana in readings</span><input type="checkbox" id="optFuri" ${state.furigana !== false ? "checked" : ""}></label>
-    </div>
-    <button class="btn secondary" id="reset">Reset progress</button>`;
-  document.getElementById("openNotes").onclick = () => setTab("notes");
-  bindBadges($view);
-  document.getElementById("openStudio").onclick = () => openVoiceStudio("lesson");
-  document.getElementById("openLab").onclick = () => openVoiceLab();
-  $view.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
-    state.voiceStyle = b.dataset.style; save();
-    $view.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("active", x === b));
-    TTS.speak("こんにちは！一緒に日本語を勉強しよう！", { rate: 0.9 });
-  });
-  $view.querySelectorAll("[data-voice]").forEach(b => b.onclick = () => {
-    state.ttsVoice = b.dataset.voice; save();
-    $view.querySelectorAll("[data-voice]").forEach(x => x.classList.toggle("on", x === b));
-    TTS.speak("この声はどうですか？", { rate: 0.95 });
-  });
-  $view.querySelectorAll("[data-kitsu]").forEach(b => b.onclick = () => {
-    state.kitsuStyle = b.dataset.kitsu; save();
-    $view.querySelectorAll("[data-kitsu]").forEach(x => x.classList.toggle("active", x === b));
-    Mascot.voice(b.dataset.kitsu === "gentle"
-      ? { jp: "ふふ、これからはやさしく教えますね。", en: "Hehe, from now on I'll teach you gently." }
-      : { jp: "やっほー！元気にいこうね！", en: "Yay! Let's go with energy!" });
-  });
-  document.getElementById("testKitsu").onclick = () => TTS.speak(state.kitsuStyle === "gentle" ? "こんにちは。キツです。一緒に、ゆっくりがんばりましょうね。" : "やっほー！キツだよ！一緒にがんばろうね！", { character: true });
-  document.getElementById("testVoice").onclick = () => {
-    TTS.speak("こんにちは！キツネのキツです。聞こえますか？", { rate: 0.9 });
-    setTimeout(() => voiceDiagnosis(document.getElementById("voiceDiag")), 700);
-  };
-  document.getElementById("optVoice").onchange = e => { state.voice = e.target.checked; save(); };
-  document.getElementById("optAuto").onchange = e => { state.autoNext = e.target.checked; save(); };
-  document.getElementById("optSfx").onchange = e => { state.sfx = e.target.checked; save(); if (e.target.checked) Mascot.sfx("right"); };
-  document.getElementById("optFuri").onchange = e => { state.furigana = e.target.checked; save(); };
-  document.getElementById("reset").onclick = () => {
-    askConfirm("Erase all progress? This can't be undone.", "Erase").then(ok => {
-      if (ok) { state = { xp: 0, streak: 0, lastDay: null, completed: {}, srs: {}, daily: {}, aiLessons: state.aiLessons, notes: state.notes }; save(); renderProfile(); }
-    });
-  };
-}
+// The Me tab is rendered by profile.js (renderMe).
 
 // Explains why there may be no sound, with steps for the viewer's device.
 function voiceDiagnosis(box) {
@@ -818,5 +722,5 @@ function finishSession(s) {
 
 // ---------- Boot ----------
 // Other scripts (e.g. speak.js) can register extra tabs in VIEWS before boot.
-const VIEWS = { review: renderReview, chart: renderChart, profile: renderProfile }; // home: journey.js
+const VIEWS = { review: renderReview, chart: renderChart }; // profile: profile.js // home: journey.js
 window.addEventListener("DOMContentLoaded", () => { save(); setTab("home"); setTimeout(moveTabInk, 50); });
