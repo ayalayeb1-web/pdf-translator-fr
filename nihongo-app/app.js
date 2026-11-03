@@ -80,7 +80,11 @@ const TTS = (() => {
   const isNatural = v => !!v && quality(v) >= 60;
   const pickBest = vs => [...jaOnly(vs)].sort((a, b) => quality(b) - quality(a))[0] || null;
   // Small, natural shifts only: large pitch changes make synthetic voices sound robotic.
-  const STYLES = { cute: { pitch: 1.12, rate: 0.03 }, gentle: { pitch: 1.05, rate: -0.05 }, natural: { pitch: 1, rate: 0 }, calm: { pitch: 0.96, rate: -0.08 } };
+  const STYLES = {
+    natural: { pitch: 1, rate: 0 }, soft: { pitch: 1.06, rate: -0.06 }, energetic: { pitch: 1.1, rate: 0.08 },
+    calm: { pitch: 0.95, rate: -0.12 }, slow: { pitch: 1, rate: -0.25 }, anime: { pitch: 1.22, rate: 0.04 },
+    cute: { pitch: 1.12, rate: 0.03 }, gentle: { pitch: 1.05, rate: -0.05 }, // older names
+  };
   const load = () => { if (!ok) return; try { voices = speechSynthesis.getVoices() || []; ja = pickBest(voices); } catch (_) {} };
   if (ok) {
     load();
@@ -96,13 +100,18 @@ const TTS = (() => {
   document.addEventListener("keydown", unlock, { capture: true });
 
   // character: true → Kitsu's own voice (always cute); otherwise the lesson voice style from settings.
-  function speak(text, { rate = 0.85, pitch = 1, onend, character = false } = {}) {
+  function speak(text, { rate = 0.85, pitch = 1, onend, character = false, voiceName } = {}) {
     const style = STYLES[state.voiceStyle || "natural"] || STYLES.natural;
     if (character) {
-      if (state.kitsuStyle === "gentle") { pitch = 1.06; rate = 0.9; } else { pitch = 1.16; rate = Math.max(rate, 1); }
+      const ms = STYLES[state.mascotStyle];
+      if (ms) { pitch = ms.pitch; rate = 0.97 + ms.rate; }
+      else if (state.kitsuStyle === "gentle") { pitch = 1.06; rate = 0.9; } else { pitch = 1.16; rate = Math.max(rate, 1); }
+    } else {
+      pitch = Math.min(2, pitch * style.pitch * (state.voicePitch || 1));
+      rate = Math.max(0.4, (rate + style.rate) * (state.voiceRate || 1));
     }
-    else { pitch = Math.min(2, pitch * style.pitch); rate = Math.max(0.4, rate + style.rate); }
-    const chosen = (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
+    const chosen = (voiceName && voices.find(v => v.name === voiceName)) || (character && state.mascotVoiceName && voices.find(v => v.name === state.mascotVoiceName))
+      || (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja;
     let fired = false;
     const end = () => { if (!fired) { fired = true; onend?.(); } };
     if (!ok || !text) { setTimeout(end, 200); return false; }
@@ -135,7 +144,8 @@ const TTS = (() => {
     status: () => { load(); return { supported: ok, voices: voices.length, ja: ja ? `${ja.name} (${ja.lang})` : null }; },
     list: () => { load(); return [...jaOnly(voices)].sort((a, b) => quality(b) - quality(a)); },
     current: () => { load(); return ((state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja)?.name || ""; },
-    isNatural,
+    isNatural, quality, STYLES,
+    currentFor: character => { load(); return ((character && state.mascotVoiceName && voices.find(v => v.name === state.mascotVoiceName)) || (state.ttsVoice && voices.find(v => v.name === state.ttsVoice)) || ja)?.name || ""; },
   };
 })();
 let jaVoice = null; // kept for older call sites; TTS picks the voice now
@@ -479,18 +489,11 @@ function renderProfile() {
       <p style="margin:4px 0 6px;font-weight:800">Kitsu's personality</p>
       <div class="voice-styles two">${[["cheerful", "☀️", "Cheerful"], ["gentle", "🌙", "Gentle & polite"]].map(([k, ic, l]) =>
         `<button class="vstyle ${(state.kitsuStyle || "cheerful") === k ? "active" : ""}" data-kitsu="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
-      <p style="margin:14px 0 6px;font-weight:800">Lesson voice</p>
-      <div class="voice-styles four">${[["cute", "🌸", "Cute"], ["gentle", "🌙", "Gentle"], ["natural", "🎙️", "Natural"], ["calm", "🍵", "Calm"]].map(([k, ic, l]) =>
-        `<button class="vstyle ${(state.voiceStyle || "natural") === k ? "active" : ""}" data-style="${k}"><span>${ic}</span>${l}</button>`).join("")}</div>
-      <p class="muted" style="font-size:.8rem;margin:6px 0 10px">How words and sentences sound in lessons. Kitsu's own voice follows her personality. Natural is best for copying real pronunciation.</p>
-      ${(() => {
-        const vs = TTS.list(), cur = TTS.current();
-        if (!vs.length) return "";
-        const tip = !TTS.isNatural(vs[0]) ? `<div class="voice-tip">🤖 The voices on this device sound robotic. For a natural, human voice, open this app in <b>Microsoft Edge</b> (free natural voices) or <b>Google Chrome</b>.</div>` : "";
-        return `${tip}<p style="margin:14px 0 6px;font-weight:800">Voices on this device <small class="muted">tap to try</small></p>
-          <div class="voice-list">${vs.slice(0, 8).map(v => `<button class="voice-row ${v.name === cur ? "on" : ""}" data-voice="${esc(v.name)}">
-            <span class="vr-name">${esc(v.name)}</span><span class="vr-badge ${TTS.isNatural(v) ? "nat" : "rob"}">${TTS.isNatural(v) ? "✨ Natural" : "🤖 Robotic"}</span></button>`).join("")}</div>`;
-      })()}
+      <div class="voice-now">
+        <div><small class="muted">Lesson voice</small><b>${esc(TTS.currentFor(false) ? voiceShortName(TTS.currentFor(false)) : "None found")}</b></div>
+        <div><small class="muted">Style</small><b>${esc((VOICE_PRESETS.find(p => p[0] === (state.voiceStyle || "natural")) || VOICE_PRESETS[0])[2])}</b></div>
+      </div>
+      <button class="btn" id="openStudio" style="margin:10px 0">🎚️ Voice studio: choose your voice</button>
       <div class="tr-actions"><button class="btn" id="testVoice">🔊 Lesson voice</button><button class="btn secondary" id="testKitsu">🦊 Kitsu</button></div>
       <div id="voiceDiag"></div>
     </div>
@@ -503,6 +506,7 @@ function renderProfile() {
     </div>
     <button class="btn secondary" id="reset">Reset progress</button>`;
   document.getElementById("openNotes").onclick = () => setTab("notes");
+  document.getElementById("openStudio").onclick = () => openVoiceStudio("lesson");
   $view.querySelectorAll("[data-style]").forEach(b => b.onclick = () => {
     state.voiceStyle = b.dataset.style; save();
     $view.querySelectorAll("[data-style]").forEach(x => x.classList.toggle("active", x === b));

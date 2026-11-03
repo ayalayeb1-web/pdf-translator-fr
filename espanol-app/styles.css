@@ -697,3 +697,36 @@ body.in-lesson main { padding-bottom: 24px; }
 .vr-badge { flex: none; font-size: .72rem; font-weight: 900; padding: 3px 8px; border-radius: 99px; }
 .vr-badge.nat { background: color-mix(in srgb, var(--green) 16%, var(--card)); color: var(--green); }
 .vr-badge.rob { background: var(--border); color: var(--muted); }
+
+/* Voice studio */
+.studio-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; margin: 12px 0 4px; border-radius: 18px; background: var(--card); border: 1px solid var(--border); }
+.studio-tabs button { font: inherit; font-weight: 900; padding: 10px; border: 0; border-radius: 14px; background: none; color: var(--muted); cursor: pointer; transition: all .3s var(--spring); }
+.studio-tabs button.on { background: linear-gradient(135deg, var(--pink), #ff8a6b); color: #fff; box-shadow: 0 8px 16px -10px var(--pink); }
+.studio-h { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); font-weight: 400; font-size: 1.1rem; margin: 20px 0 10px; }
+.studio-h span { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--pink); color: #fff; font-size: .8rem; font-family: var(--font-body); font-weight: 900; }
+.studio-h small { font-family: var(--font-body); font-size: .78rem; color: var(--muted); }
+.model-list { display: flex; flex-direction: column; gap: 8px; }
+.model-card { display: flex; align-items: stretch; gap: 6px; border-radius: 18px; border: 1px solid var(--border); background: var(--card); box-shadow: var(--shadow); transition: transform .25s var(--spring), border-color .2s; }
+.model-card.on { border-color: var(--pink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pink) 20%, transparent); }
+.mc-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.mc-av { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 1.1rem; font-weight: 900; background: color-mix(in srgb, var(--blue) 14%, var(--card)); color: var(--blue); }
+.mc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mc-txt b { overflow-wrap: anywhere; } .mc-txt small { color: var(--muted); font-size: .75rem; }
+.mc-play { flex: none; width: 52px; border: 0; border-left: 1px solid var(--border); border-radius: 0 18px 18px 0; background: none; font-size: 1.1rem; color: var(--pink); cursor: pointer; }
+.mc-play:hover { background: color-mix(in srgb, var(--pink) 10%, transparent); }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.preset { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 12px; border-radius: 18px; border: 1px solid var(--border); background: var(--card); font: inherit; color: var(--text); cursor: pointer; box-shadow: var(--shadow); transition: transform .25s var(--spring), border-color .2s; }
+.preset:hover { transform: translateY(-2px); }
+.preset.on { border-color: var(--pink); background: color-mix(in srgb, var(--pink) 10%, var(--card)); }
+.pr-ic { font-size: 1.5rem; } .preset small { color: var(--muted); font-size: .75rem; }
+.sliders { display: flex; flex-direction: column; gap: 6px; }
+.sliders label { display: flex; justify-content: space-between; font-weight: 800; }
+.sliders input[type=range] { width: 100%; accent-color: var(--pink); margin-bottom: 8px; }
+.sliders .chip-btn { align-self: flex-start; }
+.more-voices { display: flex; flex-direction: column; gap: 10px; }
+.mv-row { display: flex; flex-direction: column; gap: 1px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.mv-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.mv-row small { font-size: .8rem; }
+.voice-now { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.voice-now > div { display: flex; flex-direction: column; padding: 10px 12px; border-radius: 14px; background: var(--bg); min-width: 0; }
+.voice-now b { overflow-wrap: anywhere; }
