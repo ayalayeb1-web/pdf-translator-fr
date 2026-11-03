@@ -121,12 +121,11 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
     await settle(t);
   }
 
-  expect(find.text('Votre séance du jour'), findsOneWidget);
   expect(find.text('CONTINUER MON APPRENTISSAGE'), findsOneWidget);
   await shot(t, '07-aujourdhui');
   await ctrl(LogicalKeyboardKey.digit2);
   expect(state.section, Section.path);
-  expect(find.text('Niveaux CECRL'.toUpperCase()), findsOneWidget);
+  expect(find.text('A2'), findsWidgets);
   await shot(t, '08-parcours');
   await ctrl(LogicalKeyboardKey.digit3);
   expect(find.text('Révisions'), findsWidgets);

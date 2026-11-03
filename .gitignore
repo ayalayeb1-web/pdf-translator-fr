@@ -221,3 +221,7 @@ __marimo__/
 
 # Generated test audio (real recordings are committed explicitly)
 */audio/*.wav
+
+# Flutter app source (the Python template above ignores lib/)
+!voya/lib/
+!voya/windows/runner/runner.exe.manifest
