@@ -121,6 +121,9 @@ const TTS = (() => {
     const end = () => { if (!fired) { fired = true; onend?.(); } };
     if (!ok || !text) { setTimeout(end, 200); return false; }
     clearTimeout(timer);
+    // No voice for this language: the browser would read it with its default voice
+    // (e.g. a French one, with a French accent). Don't do that; explain how to fix it instead.
+    if (!chosen) { setTimeout(end, 200); if (typeof noVoiceNotice === "function") noVoiceNotice(voices.length); return false; }
     // Long text is read sentence by sentence with a short breath in between.
     const raw = text.length > 28 ? text.split(/(?<=[。！？!?…]|[.](?=\s))\s*/).map(t => t.trim()).filter(Boolean) : [text];
     // Keep very short pieces together ("¡Hola! ¡Soy Lía!") so speech doesn't sound choppy.
@@ -156,15 +159,25 @@ const TTS = (() => {
 let jaVoice = null; // kept for older call sites; TTS picks the voice now
 
 let voiceWarned = false;
-function speak(text) {
-  TTS.speak(text);
-  if (!voiceWarned) setTimeout(() => {
-    const st = TTS.status();
-    if (!voiceWarned && (!st.supported || (st.voices > 0 && !st.ja))) {
-      voiceWarned = true;
-      toast(st.supported ? "No Spanish voice on this device. Open Me → Voice to fix it." : "This browser can't speak. Try Chrome or Safari.");
-    }
-  }, 1200);
+function speak(text) { TTS.speak(text); }
+
+// Shown once per visit when the browser has no Spanish voice at all.
+function noVoiceNotice(voiceCount) {
+  if (voiceWarned || document.querySelector(".novoice")) return;
+  voiceWarned = true;
+  const inApp = /Electron|Claude/i.test(navigator.userAgent);
+  const w = document.createElement("div");
+  w.className = "modal novoice";
+  w.innerHTML = `<div class="modal-box" role="dialog" aria-modal="true" aria-label="No Spanish voice">
+    <div style="font-size:2.4rem;text-align:center">🔇</div>
+    <b style="font-size:1.1rem;text-align:center">No Spanish (Spain) voice in this browser</b>
+    <p style="margin:0;line-height:1.5">${voiceCount ? "This browser only has voices for other languages, so it would read Spanish with the wrong accent (for example a French voice). I've muted it instead." : "This browser has no voices at all."}</p>
+    <p style="margin:0;line-height:1.5"><b>Fix it in one minute:</b> open this page in <b>Microsoft Edge</b> or <b>Google Chrome</b>${inApp ? " (not inside the Claude app)" : ""}. They include real Spanish (Spain) voices for free.</p>
+    <button class="btn" id="nvStudio">🎚️ Open the voice studio</button>
+    <button class="btn secondary" id="nvOk">OK</button></div>`;
+  document.body.append(w);
+  w.querySelector("#nvOk").onclick = () => w.remove();
+  w.querySelector("#nvStudio").onclick = () => { w.remove(); openVoiceStudio("lesson"); };
 }
 
 // ---------- Helpers ----------

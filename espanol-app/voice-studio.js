@@ -79,7 +79,7 @@ function openVoiceStudio(start = "lesson") {
         <button class="${!isM ? "on" : ""}" data-tab2="lesson">📚 Lessons</button>
         <button class="${isM ? "on" : ""}" data-tab2="mascot">${VOICE_CFG.icon} ${VOICE_CFG.mascot}</button>
       </div>
-      ${!vs.length ? `<div class="voice-tip">No voice for this language was found in this browser. See “Get more natural voices” below.</div>`
+      ${!vs.length ? `<div class="voice-tip">🔇 <b>No Spanish (Spain) voice in this browser.</b> That's why it sounded like a foreign accent (your computer's default voice was reading Spanish). Open this page in <b>Microsoft Edge</b> or <b>Google Chrome</b>${/Electron|Claude/i.test(navigator.userAgent) ? " instead of the Claude app" : ""}: they include real Spanish (Spain) voices for free.</div>`
         : !TTS.isNatural(vs[0]) ? `<div class="voice-tip">🤖 All the voices in this browser sound robotic. The best fix: open the app in <b>Microsoft Edge</b>, which has free natural voices.</div>` : ""}
       <h3 class="studio-h"><span>1</span> Voice model <small>tap ▶ to listen</small></h3>
       <div class="model-list">
