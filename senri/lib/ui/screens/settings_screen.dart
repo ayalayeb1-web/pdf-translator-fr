@@ -44,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
           if (voices.isNotEmpty && !voices.any((v) => v.natural))
             const _Row(
               title: 'Astuce : voix plus naturelles',
-              subtitle: 'Vos voix sont des voix standard. Sous Windows 11, ajoutez des voix dans Paramètres → Heure et langue → Voix ; certaines voix « naturelles » ne sont toutefois pas accessibles aux applications. Senri choisit automatiquement la meilleure voix disponible.',
+              subtitle: 'Vos voix sont des voix standard. Les voix naturelles du Narrateur de Windows 11 ne sont pas ouvertes aux applications ; l’outil gratuit NaturalVoiceSAPIAdapter (open source, GitHub) peut les rendre accessibles par l’interface SAPI, que Senri lit aussi. Redémarrez Senri après l’installation : elles apparaîtront ici avec le badge « Naturelle ».',
               muted: true,
             ),
           _Row(
@@ -281,7 +281,7 @@ class _VoicePicker extends StatelessWidget {
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(v.shortName, style: context.text.titleSmall),
-                        Text('${v.region} · ${v.locale}', style: context.text.bodySmall),
+                        Text('${v.region} · ${v.locale}${v.sapi ? ' · interface SAPI' : ''}', style: context.text.bodySmall),
                       ]),
                     ),
                     if (v.natural) ...[Tag('Naturelle', color: p.success, icon: Icons.auto_awesome_rounded), const SizedBox(width: 8)],

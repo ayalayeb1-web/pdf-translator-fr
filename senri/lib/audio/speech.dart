@@ -11,12 +11,21 @@
 // no API key is ever shipped inside the app.
 import 'dart:async';
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_tts/flutter_tts.dart';
 
 class VoiceInfo {
-  VoiceInfo(this.name, this.locale);
+  VoiceInfo(this.name, this.locale, {this.engine = 'winrt', this.id = ''});
   final String name, locale;
+
+  /// 'winrt' (modern Windows voices, via flutter_tts) or 'sapi' (classic SAPI 5 voices,
+  /// including Narrator's natural voices when an adapter such as NaturalVoiceSAPIAdapter is installed).
+  final String engine;
+  final String id; // SAPI token id
+  bool get sapi => engine == 'sapi';
   String get shortName => name.replaceAll(RegExp(r'^Microsoft\s+'), '').replaceAll(RegExp(r'\s*-\s*.*$'), '').replaceAll(RegExp(r'\s*\(.*\)'), '');
 
   /// Natural / neural voices sound far more human than the older desktop ones.
@@ -54,6 +63,8 @@ class Speech {
   double normalRate = 0.5; // flutter_tts scale: 0.5 ≈ the voice's natural pace on Windows
   double slowRate = 0.32;
   Completer<void>? _done;
+  VoiceInfo? _active; // the voice that speaks right now (the chosen one, or a preview)
+  static const _sapi = MethodChannel('senri/sapi');
   int _gen = 0; // incremented by every new speak/stop: older loops stop by themselves
   static const _platformTimeout = Duration(seconds: 2);
 
@@ -83,6 +94,18 @@ class Speech {
       ];
       _tts = tts;
       available = true;
+      if (Platform.isWindows) {
+        try {
+          final list = await _sapi.invokeMethod<List<dynamic>>('getVoices').timeout(const Duration(seconds: 5), onTimeout: () => const []);
+          for (final v in list ?? const []) {
+            if (v is Map && '${v['name']}'.isNotEmpty) {
+              _voices.add(VoiceInfo('${v['name']}', '${v['locale']}', engine: 'sapi', id: '${v['id']}'));
+            }
+          }
+        } catch (_) {
+          // SAPI bridge unavailable: modern voices only
+        }
+      }
     } catch (e) {
       available = false;
       error = '$e'.contains('MissingPlugin')
@@ -117,10 +140,12 @@ class Speech {
 
   String? get voiceName => _voiceName;
   VoiceInfo? get voice => _voices.where((v) => v.name == _voiceName).firstOrNull;
+  List<VoiceInfo> get sapiVoices => _voices.where((v) => v.sapi).toList();
 
   Future<void> _apply(VoiceInfo? v) async {
+    _active = v;
     final tts = _tts;
-    if (tts == null) return;
+    if (tts == null || (v != null && v.sapi)) return; // SAPI voices are chosen per utterance
     try {
       await tts.setLanguage(_locale).timeout(_platformTimeout, onTimeout: () => null);
       if (v != null) await tts.setVoice({'name': v.name, 'locale': v.locale}).timeout(_platformTimeout, onTimeout: () => null);
@@ -154,9 +179,31 @@ class Speech {
     return out.isEmpty ? [text] : out;
   }
 
+  /// flutter_tts rate (0.5 = natural) → SAPI rate (-10…10, 0 = natural).
+  static int sapiRate(double rate) => ((rate - 0.5) * 20).round().clamp(-10, 10);
+
+  Future<void> _speakSapi(String text, double rate, int gen) async {
+    final v = _active!;
+    try {
+      final ok = await _sapi.invokeMethod<bool>('speak', {'text': text, 'id': v.id, 'rate': sapiRate(rate)}).timeout(_platformTimeout, onTimeout: () => false);
+      if (ok != true) return;
+      final limit = DateTime.now().add(Duration(milliseconds: 2500 + (text.length * 300 * (0.5 / rate)).round()));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      while (gen == _gen && DateTime.now().isBefore(limit)) {
+        final speaking = await _sapi.invokeMethod<bool>('isSpeaking').timeout(_platformTimeout, onTimeout: () => false);
+        if (speaking != true) break;
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+      }
+    } catch (e) {
+      error = '$e';
+    }
+  }
+
   Future<void> _speakRaw(String text, double rate, int gen) async {
+    if (gen != _gen) return;
+    if (_active != null && _active!.sapi) return _speakSapi(text, rate, gen);
     final tts = _tts;
-    if (tts == null || gen != _gen) return;
+    if (tts == null) return;
     _done = Completer<void>();
     final done = _done!.future;
     try {
@@ -206,7 +253,11 @@ class Speech {
     _gen++;
     if (!nowPlaying.value.playing) return; // calling the native stop() while idle is unsafe on some platforms
     try {
-      await _tts?.stop().timeout(_platformTimeout, onTimeout: () => null);
+      if (_active != null && _active!.sapi) {
+        await _sapi.invokeMethod<void>('stop').timeout(_platformTimeout, onTimeout: () {});
+      } else {
+        await _tts?.stop().timeout(_platformTimeout, onTimeout: () => null);
+      }
     } catch (_) {}
     _chunkDone();
     nowPlaying.value = NowPlaying(text: nowPlaying.value.text, playing: false, slow: nowPlaying.value.slow);

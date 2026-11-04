@@ -34,6 +34,16 @@ dart run msix:create                  # paquet MSIX
 
 Senri utilise les voix installées sur Windows. Pour une bonne prononciation, allez dans Paramètres Windows → Heure et langue → Voix → Ajouter des voix, puis installez **Japonais**, **Espagnol (Espagne)** et **Italien (Italie)**. Redémarrez ensuite Senri. Le choix de la voix se fait dans Senri → Paramètres → Voix.
 
+### Voix naturelles du Narrateur (Windows 11)
+
+Windows réserve ses voix naturelles au Narrateur. Senri lit deux interfaces vocales : l'interface moderne (WinRT) et l'interface classique SAPI 5. L'outil gratuit et open source **NaturalVoiceSAPIAdapter** (GitHub, outil tiers non Microsoft) peut exposer les voix naturelles du Narrateur à SAPI.
+
+1. Téléchargez les voix naturelles voulues dans Paramètres → Accessibilité → Narrateur → Ajouter des voix naturelles.
+2. Installez NaturalVoiceSAPIAdapter en suivant les instructions de son dépôt.
+3. Redémarrez Senri. Si l'adaptateur les expose, ces voix apparaissent dans Senri → Paramètres → Voix, avec la mention « interface SAPI » et le badge « Naturelle », et sont choisies automatiquement.
+
+Ce cas n'a pas pu être vérifié sur les machines de test (elles n'ont pas les voix du Narrateur). La lecture par SAPI est, elle, testée avec les voix classiques de Windows.
+
 ## Micro
 
 Le Speaking Lab demande l'accès au micro. S'il est refusé, allez dans Paramètres Windows → Confidentialité et sécurité → Microphone et activez « Autoriser les applications de bureau à accéder au microphone ».
