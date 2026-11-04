@@ -9,6 +9,7 @@ import '../audio/speech.dart';
 import '../content/models.dart';
 import '../core/app_state.dart';
 import 'screens/dashboard.dart';
+import 'screens/dialogues_screen.dart';
 import 'screens/lesson_player.dart';
 import 'screens/path_screen.dart';
 import 'screens/review_screen.dart';
@@ -29,9 +30,10 @@ class NavItem {
 const navItems = [
   NavItem(Section.home, 'Aujourd’hui', Icons.wb_twilight_rounded, '1'),
   NavItem(Section.path, 'Parcours', Icons.route_rounded, '2'),
-  NavItem(Section.review, 'Révisions', Icons.replay_circle_filled_rounded, '3'),
-  NavItem(Section.vocabulary, 'Mon vocabulaire', Icons.bookmarks_rounded, '4'),
-  NavItem(Section.speaking, 'Speaking Lab', Icons.graphic_eq_rounded, '5'),
+  NavItem(Section.dialogues, 'Dialogues', Icons.forum_rounded, '3'),
+  NavItem(Section.review, 'Révisions', Icons.replay_circle_filled_rounded, '4'),
+  NavItem(Section.vocabulary, 'Mon vocabulaire', Icons.bookmarks_rounded, '5'),
+  NavItem(Section.speaking, 'Speaking Lab', Icons.graphic_eq_rounded, '6'),
 ];
 
 class OpenPaletteIntent extends Intent {
@@ -78,19 +80,22 @@ class _ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final p = context.pal;
-    final inActivity = app.activeLesson != null || app.reviewing;
+    final inActivity = app.inActivity;
     final immersive = !inActivity && (app.section == Section.home || app.section == Section.path);
     Widget stage;
     if (app.activeLesson != null) {
       stage = LessonPlayer(key: ValueKey('lesson-${app.activeLesson!.id}'), lesson: app.activeLesson!);
     } else if (app.reviewing) {
       stage = const ReviewSession(key: ValueKey('review-session'));
+    } else if (app.activeDialogue != null) {
+      stage = DialoguePlayer(key: ValueKey('dialogue-${app.activeDialogue!.id}'), dialogue: app.activeDialogue!);
     } else {
       stage = KeyedSubtree(
         key: ValueKey('${app.section}-${app.lang}'),
         child: switch (app.section) {
           Section.home => const Dashboard(),
           Section.path => const PathScreen(),
+          Section.dialogues => const DialoguesScreen(),
           Section.review => const ReviewScreen(),
           Section.vocabulary => const VocabularyScreen(),
           Section.speaking => const SpeakingLab(),
@@ -125,6 +130,8 @@ class _ShellState extends State<Shell> {
                         duration: Tokens.base,
                         switchInCurve: Tokens.ease,
                         switchOutCurve: Curves.easeIn,
+                        // pages fill the stage (the default layout centres them vertically)
+                        layoutBuilder: (current, previous) => Stack(fit: StackFit.expand, children: [...previous, ?current]),
                         transitionBuilder: (child, a) => FadeTransition(
                           opacity: a,
                           child: SlideTransition(position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(a), child: child),
@@ -166,6 +173,8 @@ class TitleBar extends StatelessWidget {
         ? '${app.activeLesson!.levelId} · ${app.activeLesson!.unitTitle} · ${app.activeLesson!.title}'
         : app.reviewing
             ? 'Session de révision'
+            : app.activeDialogue != null
+                ? 'Dialogue · ${app.activeDialogue!.title}'
             : app.section == Section.settings
                 ? 'Paramètres'
                 : navItems.firstWhere((n) => n.section == app.section).label;
@@ -181,7 +190,7 @@ class TitleBar extends StatelessWidget {
         const SizedBox(width: 10),
         Text('Senri', style: context.text.titleMedium!.copyWith(fontFamily: Tokens.display, fontSize: 17)),
         const SizedBox(width: 14),
-        _LanguageChip(enabled: app.activeLesson == null && !app.reviewing),
+        _LanguageChip(enabled: !app.inActivity),
         const SizedBox(width: 14),
         Expanded(
           child: GestureDetector(
@@ -527,7 +536,7 @@ class _PaletteEntry {
 
 Future<void> showCommandPalette(BuildContext context) {
   final app = AppScope.read(context);
-  if (app.activeLesson != null || app.reviewing) return Future.value();
+  if (app.inActivity) return Future.value();
   return showDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.25),
@@ -650,7 +659,7 @@ class _CommandPaletteState extends State<_CommandPalette> {
 
 Future<void> showShortcutHelp(BuildContext context) {
   const rows = [
-    ('Ctrl 1 … 5', 'Aller à une section'),
+    ('Ctrl 1 … 6', 'Aller à une section'),
     ('Ctrl ,', 'Paramètres'),
     ('Ctrl K', 'Rechercher (leçons, mots, sections)'),
     ('F11', 'Plein écran'),
@@ -658,7 +667,8 @@ Future<void> showShortcutHelp(BuildContext context) {
     ('1 · 2 · 3 · 4', 'Choisir une réponse pendant un exercice'),
     ('Entrée', 'Valider / continuer'),
     ('Espace', 'Écouter l’audio de l’exercice (hors saisie)'),
-    ('Échap', 'Quitter une leçon ou une révision'),
+    ('Échap', 'Quitter une leçon, une révision ou un dialogue'),
+    ('T', 'Afficher / masquer la traduction dans un dialogue'),
     ('Clic droit', 'Menu d’un mot : écouter, ajouter au vocabulaire, copier'),
   ];
   return showDialog(

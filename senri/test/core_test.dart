@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:senri/content/dialogue.dart';
 import 'package:senri/content/models.dart';
 import 'package:senri/core/practice.dart';
 import 'package:senri/core/srs.dart';
@@ -29,6 +30,21 @@ void main() {
           }
         }
       });
+    }
+  });
+
+  test('dialogues: three scenes per language, every learner turn has a right answer and explained wrong ones', () {
+    final all = Dialogue.parse(File('assets/content/dialogues.json').readAsStringSync());
+    for (final code in ['ja', 'es', 'it']) {
+      expect(all[code]!.length, 3, reason: code);
+      for (final d in all[code]!) {
+        expect(d.choiceCount, greaterThan(0));
+        expect(d.culture, isNotEmpty);
+        for (final t in d.turns.where((t) => t.mine)) {
+          expect(t.choices.any((c) => c.ok), isTrue, reason: '${d.id}: ${t.task}');
+          expect(t.choices.where((c) => !c.ok).every((c) => c.why.isNotEmpty), isTrue, reason: '${d.id}: ${t.task}');
+        }
+      }
     }
   });
 

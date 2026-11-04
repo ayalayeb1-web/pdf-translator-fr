@@ -128,13 +128,39 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
   expect(state.section, Section.path);
   expect(find.text('A2'), findsWidgets);
   await shot(t, '08-parcours');
+
+  // ---- a full dialogue scene, answered with the keyboard
   await ctrl(LogicalKeyboardKey.digit3);
+  expect(state.section, Section.dialogues);
+  await shot(t, '08b-dialogues');
+  await t.tap(find.text(state.dialogues.first.title).first, warnIfMissed: false);
+  await settle(t);
+  expect(state.activeDialogue, isNotNull);
+  var dlgShot = false;
+  for (var i = 0; i < 80 && find.text('SCÈNE TERMINÉE').evaluate().isEmpty; i++) {
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 120)));
+    await settle(t, 6);
+    if (!dlgShot && find.byIcon(Icons.lightbulb_outline_rounded).evaluate().isNotEmpty) {
+      dlgShot = true;
+      await shot(t, '08c-dialogue-correction');
+    }
+    await t.sendKeyEvent(const [LogicalKeyboardKey.digit3, LogicalKeyboardKey.digit2, LogicalKeyboardKey.digit1][i % 3]);
+  }
+  await waitFor(t, () => state.completed.keys.any((k) => k.startsWith('dlg:')));
+  await settle(t);
+  expect(find.text('SCÈNE TERMINÉE'), findsOneWidget);
+  await shot(t, '08d-dialogue-bilan');
+  await t.sendKeyEvent(LogicalKeyboardKey.enter);
+  await settle(t);
+  expect(state.activeDialogue, isNull);
+
+  await ctrl(LogicalKeyboardKey.digit4);
   expect(find.text('Révisions'), findsWidgets);
   await shot(t, '09-revisions');
-  await ctrl(LogicalKeyboardKey.digit4);
+  await ctrl(LogicalKeyboardKey.digit5);
   expect(find.text('Mon vocabulaire'), findsWidgets);
   await shot(t, '10-vocabulaire');
-  await ctrl(LogicalKeyboardKey.digit5);
+  await ctrl(LogicalKeyboardKey.digit6);
   expect(find.text('Écouter · s’enregistrer · comparer'), findsOneWidget);
   await shot(t, '11-speaking-lab');
   await ctrl(LogicalKeyboardKey.comma);

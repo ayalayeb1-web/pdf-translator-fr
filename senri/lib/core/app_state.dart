@@ -4,20 +4,25 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../audio/speech.dart';
+import '../content/dialogue.dart';
 import '../content/models.dart';
 import '../platform/desktop.dart';
 import 'srs.dart';
 import 'store.dart';
 
-enum Section { home, path, review, vocabulary, speaking, settings }
+enum Section { home, path, dialogues, review, vocabulary, speaking, settings }
 
 class AppState extends ChangeNotifier {
-  AppState({required this.store, required this.courses, required this.speech, required this.desktop});
+  AppState({required this.store, required this.courses, required this.speech, required this.desktop, this.allDialogues = const {}});
 
   final Store store;
   final Map<String, Course> courses;
   final Speech speech;
   final Desktop desktop;
+  final Map<String, List<Dialogue>> allDialogues;
+  Dialogue? activeDialogue; // a conversation being played
+
+  List<Dialogue> get dialogues => allDialogues[lang] ?? const [];
 
   Map<String, String> _settings = {};
   Map<String, double> completed = {};
@@ -77,7 +82,7 @@ class AppState extends ChangeNotifier {
   }
 
   void go(Section s) {
-    if (activeLesson != null || reviewing) return; // finish or leave the activity first
+    if (inActivity) return; // finish or leave the activity first
     section = s;
     notifyListeners();
   }
@@ -100,6 +105,18 @@ class AppState extends ChangeNotifier {
     final ls = l.lessons.where((x) => x.written).toList();
     if (ls.isEmpty) return 0;
     return ls.where((x) => completed.containsKey(x.id)).length / ls.length;
+  }
+
+  bool get inActivity => activeLesson != null || reviewing || activeDialogue != null;
+
+  void startDialogue(Dialogue d) {
+    activeDialogue = d;
+    notifyListeners();
+  }
+
+  void closeDialogue() {
+    activeDialogue = null;
+    refresh();
   }
 
   void startLesson(Lesson l) {

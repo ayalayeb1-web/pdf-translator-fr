@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'audio/speech.dart';
+import 'content/dialogue.dart';
 import 'content/models.dart';
 import 'core/app_state.dart';
 import 'core/store.dart';
@@ -20,6 +21,7 @@ Future<AppState> bootstrap(Desktop desktop, {bool inMemory = false}) async {
     Course.load('ja'),
     Course.load('es'),
     Course.load('it'),
+    Dialogue.load(),
   ]);
   final speech = Speech();
   await speech.init();
@@ -28,6 +30,7 @@ Future<AppState> bootstrap(Desktop desktop, {bool inMemory = false}) async {
     courses: {'ja': results[1] as Course, 'es': results[2] as Course, 'it': results[3] as Course},
     speech: speech,
     desktop: desktop,
+    allDialogues: results[4] as Map<String, List<Dialogue>>,
   );
   await state.load();
   if (state.onboarded && state.notifications && state.dueCount > 0) {
