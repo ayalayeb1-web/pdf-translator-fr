@@ -137,14 +137,20 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
   await settle(t);
   expect(state.activeDialogue, isNotNull);
   var dlgShot = false;
-  for (var i = 0; i < 80 && find.text('SCÈNE TERMINÉE').evaluate().isEmpty; i++) {
-    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 120)));
-    await settle(t, 6);
+  bool done() => find.text('SCÈNE TERMINÉE').evaluate().isNotEmpty;
+  bool choicesShown() => find.text('1 · 2 · 3').evaluate().isNotEmpty;
+  for (var i = 0; i < 40 && !done(); i++) {
+    // like a real user: wait (in real time) until the partner has spoken and the replies appear
+    await waitFor(t, () => choicesShown() || done(), tries: 400);
+    if (done()) break;
+    await settle(t, 3);
     if (!dlgShot && find.byIcon(Icons.lightbulb_outline_rounded).evaluate().isNotEmpty) {
       dlgShot = true;
       await shot(t, '08c-dialogue-correction');
     }
     await t.sendKeyEvent(const [LogicalKeyboardKey.digit3, LogicalKeyboardKey.digit2, LogicalKeyboardKey.digit1][i % 3]);
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 150)));
+    await settle(t, 4);
   }
   await waitFor(t, () => state.completed.keys.any((k) => k.startsWith('dlg:')));
   await settle(t);
