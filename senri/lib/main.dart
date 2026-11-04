@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'audio/speech.dart';
+import 'content/accent.dart';
 import 'content/dialogue.dart';
 import 'content/models.dart';
 import 'core/app_state.dart';
@@ -22,6 +23,7 @@ Future<AppState> bootstrap(Desktop desktop, {bool inMemory = false}) async {
     Course.load('es'),
     Course.load('it'),
     Dialogue.load(),
+    AccentPoint.load(),
   ]);
   final speech = Speech();
   await speech.init();
@@ -31,6 +33,7 @@ Future<AppState> bootstrap(Desktop desktop, {bool inMemory = false}) async {
     speech: speech,
     desktop: desktop,
     allDialogues: results[4] as Map<String, List<Dialogue>>,
+    allAccent: results[5] as Map<String, List<AccentPoint>>,
   );
   await state.load();
   if (state.onboarded && state.notifications && state.dueCount > 0) {

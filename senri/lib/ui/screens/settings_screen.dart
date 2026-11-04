@@ -34,25 +34,22 @@ class SettingsScreen extends StatelessWidget {
               warn: true,
             )
           else
+            _VoicePicker(voices: voices, current: current),
+          if (app.speech.otherRegions(app.language.locale).isNotEmpty && app.lang == 'es')
             _Row(
-              title: 'Voix des leçons',
-              subtitle: '${voices.length} voix ${app.language.locale} sur cet ordinateur',
-              trailing: DropdownButton<String>(
-                value: voices.any((v) => v.name == current) ? current : voices.first.name,
-                underline: const SizedBox.shrink(),
-                borderRadius: BorderRadius.circular(Tokens.rMd),
-                items: [for (final v in voices) DropdownMenuItem(value: v.name, child: Text(v.shortName))],
-                onChanged: (v) async {
-                  if (v == null) return;
-                  await app.set('voice_${app.lang}', v);
-                  await app.speech.configure(app.language.locale, v);
-                  app.speech.speak(const {'ja': 'こんにちは。よろしくお願いします。', 'es': 'Hola, ¿qué tal? Encantada de conocerte.', 'it': 'Ciao, come stai? Piacere di conoscerti.'}[app.lang]!);
-                },
-              ),
+              title: 'Voix d’autres régions ignorées',
+              subtitle: '${app.speech.otherRegions(app.language.locale).map((v) => '${v.shortName} (${v.region})').join(', ')} : Senri n’utilise que des voix d’Espagne pour enseigner l’accent castillan.',
+              muted: true,
+            ),
+          if (voices.isNotEmpty && !voices.any((v) => v.natural))
+            const _Row(
+              title: 'Astuce : voix plus naturelles',
+              subtitle: 'Vos voix sont des voix standard. Sous Windows 11, ajoutez des voix dans Paramètres → Heure et langue → Voix ; certaines voix « naturelles » ne sont toutefois pas accessibles aux applications. Senri choisit automatiquement la meilleure voix disponible.',
+              muted: true,
             ),
           _Row(
             title: 'Vitesse naturelle',
-            subtitle: 'La version lente est calculée automatiquement (≈ 65 %).',
+            subtitle: 'La lecture lente découpe la phrase en groupes de mots avec des pauses, pour bien entendre chaque son.',
             trailing: SizedBox(
               width: 260,
               child: Slider(
@@ -231,6 +228,69 @@ class _Row extends StatelessWidget {
           ]),
         ),
         if (trailing != null) ...[const SizedBox(width: 20), trailing!],
+      ]),
+    );
+  }
+}
+
+class _VoicePicker extends StatelessWidget {
+  const _VoicePicker({required this.voices, required this.current});
+  final List<VoiceInfo> voices;
+  final String? current;
+
+  static const samples = {
+    'ja': 'こんにちは。今日はいい天気ですね。',
+    'es': 'Hola, ¿qué tal? Hoy hace un día estupendo.',
+    'it': 'Ciao, come stai? Oggi è una bellissima giornata.',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final p = context.pal;
+    final selected = voices.any((v) => v.name == current) ? current : voices.first.name;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Voix des leçons', style: context.text.titleSmall!.copyWith(fontSize: 14)),
+        const SizedBox(height: 3),
+        Text('${voices.length} voix ${app.language.regionNote.toLowerCase()} · la meilleure est choisie automatiquement. Écoutez-les et gardez celle que vous préférez.', style: context.text.bodySmall),
+        const SizedBox(height: 12),
+        for (final v in voices)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
+              color: v.name == selected ? p.accentSoft : p.raised,
+              borderRadius: BorderRadius.circular(Tokens.rMd),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Tokens.rMd),
+                onTap: () async {
+                  await app.set('voice_${app.lang}', v.name);
+                  await app.speech.configure(app.language.locale, v.name);
+                  app.speech.speak(samples[app.lang]!);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(Tokens.rMd),
+                    border: Border.all(color: v.name == selected ? p.accent : p.line),
+                  ),
+                  child: Row(children: [
+                    Icon(v.name == selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, size: 18, color: v.name == selected ? p.accent : p.inkFaint),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(v.shortName, style: context.text.titleSmall),
+                        Text('${v.region} · ${v.locale}', style: context.text.bodySmall),
+                      ]),
+                    ),
+                    if (v.natural) ...[Tag('Naturelle', color: p.success, icon: Icons.auto_awesome_rounded), const SizedBox(width: 8)],
+                    IconBtn(icon: Icons.play_arrow_rounded, tooltip: 'Écouter cette voix', onTap: () => app.speech.preview(v, samples[app.lang]!), size: 32),
+                  ]),
+                ),
+              ),
+            ),
+          ),
       ]),
     );
   }

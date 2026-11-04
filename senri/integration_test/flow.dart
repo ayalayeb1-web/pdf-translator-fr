@@ -169,6 +169,9 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
   await ctrl(LogicalKeyboardKey.digit6);
   expect(find.text('Écouter · s’enregistrer · comparer'), findsOneWidget);
   await shot(t, '11-speaking-lab');
+  await tapText(t, 'Accent');
+  expect(find.text('Exemples à écouter et imiter'), findsOneWidget);
+  await shot(t, '11b-coach-accent');
   await ctrl(LogicalKeyboardKey.comma);
   expect(find.text('Paramètres'), findsWidgets);
   await shot(t, '12-parametres');

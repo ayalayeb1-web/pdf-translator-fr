@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:senri/audio/speech.dart';
+import 'package:senri/content/accent.dart';
 import 'package:senri/content/dialogue.dart';
 import 'package:senri/content/models.dart';
 import 'package:senri/core/practice.dart';
@@ -33,10 +35,10 @@ void main() {
     }
   });
 
-  test('dialogues: three scenes per language, every learner turn has a right answer and explained wrong ones', () {
+  test('dialogues: seven scenes per language, every learner turn has a right answer and explained wrong ones', () {
     final all = Dialogue.parse(File('assets/content/dialogues.json').readAsStringSync());
     for (final code in ['ja', 'es', 'it']) {
-      expect(all[code]!.length, 3, reason: code);
+      expect(all[code]!.length, 7, reason: code);
       for (final d in all[code]!) {
         expect(d.choiceCount, greaterThan(0));
         expect(d.culture, isNotEmpty);
@@ -46,6 +48,24 @@ void main() {
         }
       }
     }
+  });
+
+  test('accent coach: six key sounds per language, each with examples', () {
+    final all = AccentPoint.parse(File('assets/content/accent.json').readAsStringSync());
+    for (final code in ['ja', 'es', 'it']) {
+      expect(all[code]!.length, 6, reason: code);
+      for (final p in all[code]!) {
+        expect(p.examples.length, greaterThanOrEqualTo(4), reason: p.id);
+        expect(p.explain, isNotEmpty);
+      }
+    }
+  });
+
+  test('slow speech cuts sentences into short word groups', () {
+    expect(Speech.chunks('Hola, ¿qué tal?'), ['Hola,', '¿qué tal?']);
+    expect(Speech.chunks('Per primo gli spaghetti alle vongole, e per secondo il pesce del giorno.').length, greaterThan(3));
+    expect(Speech.chunks('すみません、新宿行きの電車はどこですか。'), ['すみません、', '新宿行きの電車はどこですか。']);
+    expect(Speech.chunks('ciao'), ['ciao']);
   });
 
   group('answer check', () {

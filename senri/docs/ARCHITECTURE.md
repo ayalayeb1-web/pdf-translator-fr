@@ -16,6 +16,7 @@ lib/
   platform/desktop.dart  fenêtre, plein écran, notifications natives ; no-op sur mobile
   ui/                    design system, shell desktop et écrans
 assets/content/dialogues.json  scènes de dialogue (tools/dialogues.py)
+assets/content/accent.json     coach d'accent (tools/accent.py)
 assets/content/*.json    contenu des cours (ja/es : tools/export-content.mjs ; it : tools/italian_course.py)
 ```
 

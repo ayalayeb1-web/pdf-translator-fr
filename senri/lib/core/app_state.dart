@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../audio/speech.dart';
+import '../content/accent.dart';
 import '../content/dialogue.dart';
 import '../content/models.dart';
 import '../platform/desktop.dart';
@@ -13,13 +14,15 @@ import 'store.dart';
 enum Section { home, path, dialogues, review, vocabulary, speaking, settings }
 
 class AppState extends ChangeNotifier {
-  AppState({required this.store, required this.courses, required this.speech, required this.desktop, this.allDialogues = const {}});
+  AppState({required this.store, required this.courses, required this.speech, required this.desktop, this.allDialogues = const {}, this.allAccent = const {}});
 
   final Store store;
   final Map<String, Course> courses;
   final Speech speech;
   final Desktop desktop;
   final Map<String, List<Dialogue>> allDialogues;
+  final Map<String, List<AccentPoint>> allAccent;
+  List<AccentPoint> get accentPoints => allAccent[lang] ?? const [];
   Dialogue? activeDialogue; // a conversation being played
 
   List<Dialogue> get dialogues => allDialogues[lang] ?? const [];
