@@ -15,7 +15,7 @@ lib/
     recorder.dart        micro (WAV) et lecture, pour le Speaking Lab
   platform/desktop.dart  fenêtre, plein écran, notifications natives ; no-op sur mobile
   ui/                    design system, shell desktop et écrans
-assets/content/*.json    contenu des cours (exporté par tools/export-content.mjs)
+assets/content/*.json    contenu des cours (ja/es : tools/export-content.mjs ; it : tools/italian_course.py)
 ```
 
 ## Base de données locale (`senri.db`)
@@ -36,7 +36,7 @@ L'export JSON complet se fait dans Paramètres → Données.
 
 ## Pédagogie
 
-- **Niveaux** : CECRL A1 à C2, avec repères JLPT (N5 → N1) et DELE. Les niveaux A1 et A2 sont rédigés : 90 leçons de japonais et 51 d'espagnol. B1 à C2 sont affichés comme programme, clairement marqués et sans contenu factice.
+- **Niveaux** : CECRL A1 à C2, avec repères JLPT (N5 → N1) et DELE. Les niveaux A1 et A2 sont rédigés : 90 leçons de japonais, 51 d'espagnol et 35 d'italien (repères CILS). B1 à C2 sont affichés comme programme, clairement marqués et sans contenu factice.
 - **Objectif vérifiable** pour chaque leçon, rappelé au début et évalué à la fin.
 - **Activités actives** : reconnaissance, écoute (choisir ce qu'on entend), production écrite, phrase à trous, remise en ordre, compréhension de texte.
 - **Adaptation aux erreurs** : un exercice raté revient en fin de leçon (« seconde chance ») et la carte repart en boîte 0 avec retour dans 10 minutes. Les cartes ratées plusieurs fois sont « fragiles » et passent en priorité.

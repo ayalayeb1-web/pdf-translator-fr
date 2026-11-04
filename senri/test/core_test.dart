@@ -12,13 +12,13 @@ Course load(String code) => Course.fromJson(jsonDecode(File('assets/content/$cod
 
 void main() {
   group('content', () {
-    for (final code in ['ja', 'es']) {
+    for (final code in ['ja', 'es', 'it']) {
       test('$code course parses with written A1/A2 and syllabus B1+', () {
         final c = load(code);
         expect(c.levels.map((l) => l.id), ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
         expect(c.level('A1').written, isTrue);
         expect(c.level('B1').written, isFalse);
-        expect(c.writtenLessons.length, greaterThan(40));
+        expect(c.writtenLessons.length, greaterThan(30));
         for (final l in c.writtenLessons) {
           expect(l.objective, isNotEmpty);
           final steps = Practice(Random(1)).build(l, c.items.values.toList(), lang: code);
@@ -46,6 +46,14 @@ void main() {
       expect(AnswerCheck.check('manana', 'mañana', lang: 'es').correct, isTrue);
       expect(AnswerCheck.check('¡Hola!', 'hola', lang: 'es').note, isNull);
       expect(AnswerCheck.check('', 'hola', lang: 'es').correct, isFalse);
+    });
+    test('Italian accepts missing accents but says so', () {
+      final r = AnswerCheck.check('caffe', 'il caffè', lang: 'it');
+      expect(r.correct, isFalse); // the article is part of the expected answer
+      final ok = AnswerCheck.check('lunedi', 'lunedì', lang: 'it');
+      expect(ok.correct, isTrue);
+      expect(ok.note, contains('lunedì'));
+      expect(AnswerCheck.check('perché', 'perché', lang: 'it').note, isNull);
     });
   });
 

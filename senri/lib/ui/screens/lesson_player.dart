@@ -309,10 +309,10 @@ class _LessonPlayerState extends State<LessonPlayer> {
               onSubmitted: (v) => correct == null ? _grade(v) : _next(),
             ),
           ),
-          if (app.lang == 'es') ...[
+          if (app.lang == 'es' || app.lang == 'it') ...[
             const SizedBox(height: 12),
             Wrap(spacing: 6, children: [
-              for (final ch in ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'])
+              for (final ch in app.lang == 'es' ? const ['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü', '¿', '¡'] : const ['à', 'è', 'é', 'ì', 'ò', 'ù'])
                 ActionChip(
                   label: Text(ch, style: context.text.titleMedium),
                   onPressed: correct != null

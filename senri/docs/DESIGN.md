@@ -26,7 +26,7 @@
 ## Tokens (`lib/ui/theme.dart`)
 
 - **Couleurs (clair)** : papier `#F6F2EA`, surface `#FFFDF9`, encre `#1A1E29`, encre douce `#555B68`, filet `#E6DED0`, succès `#2C7A5E`, erreur `#A8323E`.
-  Accent japonais : vermillon shu `#C63D2B`. Accent espagnol : safran terracotta `#C2611A`. Thème sombre complet, réglable : Système / Clair / Sombre.
+  Accent japonais : vermillon shu `#C63D2B`. Accent espagnol : safran terracotta `#C2611A`. Accent italien : vert cyprès toscan `#2E7A55`. Thème sombre complet, réglable : Système / Clair / Sombre.
 - **Espacement** : grille de 4 pt (4, 8, 12, 16, 20, 24, 32, 40, 48).
 - **Rayons** : 8, 12, 18, 26. **Mouvement** : 140, 240 et 420 ms, easeOutCubic.
 - **Typographie** : display 56/40/30, titre 24/20, UI 18/15/13, corps 16/14, libellés 12/10.5 en capitales espacées. Noto Sans JP en repli pour le japonais.

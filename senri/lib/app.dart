@@ -90,7 +90,7 @@ class Splash extends StatelessWidget {
           const Text('Senri', style: TextStyle(fontFamily: Tokens.display, fontSize: 40, fontWeight: FontWeight.w500, color: Color(0xFFF6F2EA), letterSpacing: -0.5)),
           const SizedBox(height: 6),
           Text(
-            error == null ? '千里 · Japonais · Español' : 'Impossible de démarrer : $error',
+            error == null ? '千里 · 日本語 · Español · Italiano' : 'Impossible de démarrer : $error',
             style: const TextStyle(fontFamily: Tokens.ui, fontSize: 13, color: Color(0xFF8D909A), fontWeight: FontWeight.w600, letterSpacing: 1.2),
           ),
         ]),

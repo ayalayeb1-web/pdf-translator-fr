@@ -32,7 +32,7 @@ dart run msix:create                  # paquet MSIX
 
 ## Voix
 
-Senri utilise les voix installées sur Windows. Pour une bonne prononciation, allez dans Paramètres Windows → Heure et langue → Voix → Ajouter des voix, puis installez **Japonais** et **Espagnol (Espagne)**. Redémarrez ensuite Senri. Le choix de la voix se fait dans Senri → Paramètres → Voix.
+Senri utilise les voix installées sur Windows. Pour une bonne prononciation, allez dans Paramètres Windows → Heure et langue → Voix → Ajouter des voix, puis installez **Japonais**, **Espagnol (Espagne)** et **Italien (Italie)**. Redémarrez ensuite Senri. Le choix de la voix se fait dans Senri → Paramètres → Voix.
 
 ## Micro
 

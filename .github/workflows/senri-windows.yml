@@ -126,7 +126,7 @@ jobs:
           name: Senri 0.1.0 (Windows, préversion)
           prerelease: true
           body: |
-            Préversion Windows de Senri, compilée et testée automatiquement par GitHub Actions.
+            Préversion Windows de Senri (japonais, espagnol, italien), compilée et testée automatiquement par GitHub Actions.
             - **Senri-Setup-0.1.0.exe** : installateur recommandé (pas de droits administrateur requis).
             - **Senri-0.1.0-portable-win64.zip** : version portable, décompresser et lancer Senri.exe.
             - **Senri.msix** : paquet MSIX signé avec un certificat de test (voir docs/WINDOWS-BUILD.md).

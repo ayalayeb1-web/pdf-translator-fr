@@ -40,9 +40,11 @@ class Palette extends ThemeExtension<Palette> {
 
   final Color paper, surface, raised, ink, inkSoft, inkFaint, line, accent, accentSoft, onAccent, success, successSoft, danger, dangerSoft, gold, sidebar;
 
-  static Color accentFor(String lang, Brightness b) => lang == 'es'
-      ? (b == Brightness.light ? const Color(0xFFC2611A) : const Color(0xFFF0A048)) // saffron / terracotta
-      : (b == Brightness.light ? const Color(0xFFC63D2B) : const Color(0xFFF07A62)); // shu vermilion
+  static Color accentFor(String lang, Brightness b) => switch (lang) {
+        'es' => b == Brightness.light ? const Color(0xFFC2611A) : const Color(0xFFF0A048), // saffron / terracotta
+        'it' => b == Brightness.light ? const Color(0xFF2E7A55) : const Color(0xFF6CC79A), // Tuscan cypress green
+        _ => b == Brightness.light ? const Color(0xFFC63D2B) : const Color(0xFFF07A62), // shu vermilion
+      };
 
   factory Palette.of(String lang, Brightness b) {
     final accent = accentFor(lang, b);

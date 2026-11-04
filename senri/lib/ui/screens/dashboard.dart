@@ -41,7 +41,7 @@ class Dashboard extends StatelessWidget {
       child: Focus(
         autofocus: true,
         child: Stack(children: [
-          Positioned.fill(child: Landscape(mood: mood, lang: app.lang, seed: app.lang == 'ja' ? 11 : 5, horizon: 0.42)),
+          Positioned.fill(child: Landscape(mood: mood, lang: app.lang, seed: const {'ja': 11, 'es': 5, 'it': 3}[app.lang] ?? 7, horizon: 0.42)),
           // legibility veil behind the text column
           Positioned.fill(
             child: IgnorePointer(

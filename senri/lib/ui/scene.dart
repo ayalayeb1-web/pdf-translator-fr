@@ -15,6 +15,18 @@ class SceneMood {
   static SceneMood of(String lang, String level, Brightness b) {
     final dark = b == Brightness.dark;
     final i = const ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].indexOf(level).clamp(0, 5);
+    if (lang == 'it') {
+      // Tuscany: rolling green-gold hills, cypress rows, ochre villas.
+      const moods = [
+        SceneMood(sky: [Color(0xFFF3D9CF), Color(0xFFFAEEE2)], sun: Color(0xFFF2915E), layers: [Color(0xFFD9C9B0), Color(0xFFBFB58C), Color(0xFF8E9A63), Color(0xFF5E6E44)], mist: Color(0xFFFAEEE2)),
+        SceneMood(sky: [Color(0xFFC4DDEA), Color(0xFFF3EFE2)], sun: Color(0xFFF6C35E), layers: [Color(0xFFC9D0A8), Color(0xFFA8B57A), Color(0xFF7B9152), Color(0xFF4C6A3A)], mist: Color(0xFFF3EFE2)),
+        SceneMood(sky: [Color(0xFF94C4E2), Color(0xFFEDF3EC)], sun: Color(0xFFFFD77E), layers: [Color(0xFFD7CF92), Color(0xFFB8B565), Color(0xFF86964A), Color(0xFF52693A)], mist: Color(0xFFEDF3EC)),
+        SceneMood(sky: [Color(0xFFE9A47E), Color(0xFFF7DCB8)], sun: Color(0xFFFFE2A2), layers: [Color(0xFFD9A774), Color(0xFFB98454), Color(0xFF7F6A3C), Color(0xFF4D4528)], mist: Color(0xFFF7DCB8)),
+        SceneMood(sky: [Color(0xFF5A4A73), Color(0xFFE29C82)], sun: Color(0xFFFFC793), layers: [Color(0xFF9A7C82), Color(0xFF725A66), Color(0xFF4C3C4C), Color(0xFF2B2230)], mist: Color(0xFFE29C82)),
+        SceneMood(sky: [Color(0xFF14213A), Color(0xFF34476A)], sun: Color(0xFFF2ECD6), layers: [Color(0xFF34496A), Color(0xFF263A52), Color(0xFF1B2A3C), Color(0xFF111B28)], mist: Color(0xFF34476A), night: true),
+      ];
+      return dark ? moods[5] : moods[i];
+    }
     if (lang == 'es') {
       // Castile & Andalusia: ochre plains, terracotta hills, olive groves.
       const moods = [
@@ -91,7 +103,7 @@ class _LandscapePainter extends CustomPainter {
     for (var k = 1; k <= 4; k++) {
       final f = (0.6 + r.nextDouble() * 1.4) * k / w * math.pi * 2;
       final ph = r.nextDouble() * 6.283;
-      final a = (lang == 'ja' ? 1.0 : 0.55) / (k * k * 0.9);
+      final a = (lang == 'ja' ? 1.0 : lang == 'it' ? 0.75 : 0.55) / (k * k * 0.9);
       y += math.sin(x * f + ph) * a;
     }
     return y;
@@ -134,7 +146,7 @@ class _LandscapePainter extends CustomPainter {
     final n = m.layers.length;
     for (var l = 0; l < n; l++) {
       final base = h * (horizon + l * (0.11 + (lang == 'es' ? 0.0 : 0.01)));
-      final amp = h * (lang == 'ja' ? (0.09 - l * 0.012) : (0.035 - l * 0.004));
+      final amp = h * (lang == 'ja' ? (0.09 - l * 0.012) : lang == 'it' ? (0.05 - l * 0.006) : (0.035 - l * 0.004));
       final shift = parallax * (0.08 + l * 0.12);
       final path = Path()..moveTo(0, h);
       for (double x = 0; x <= w + 8; x += 8) {
@@ -155,11 +167,36 @@ class _LandscapePainter extends CustomPainter {
   void _details(Canvas canvas, Size s, int l, double base, double amp, double shift) {
     final r = math.Random(seed * 7 + l);
     final paint = Paint()..color = Color.lerp(m.layers[l], Colors.black, 0.18)!;
-    final count = lang == 'ja' ? 26 : 14;
+    final count = lang == 'ja' ? 26 : lang == 'it' ? 22 : 14;
     for (var i = 0; i < count; i++) {
       final x = r.nextDouble() * s.width;
       final y = base - amp * (1 + _ridge(x + shift, l, s.width));
-      if (lang == 'ja') {
+      if (lang == 'it') {
+        if (r.nextDouble() < 0.72) {
+          // cypress: a tall narrow flame shape
+          final hgt = 18 + r.nextDouble() * 26.0 * (l - 1);
+          final w = hgt * 0.17;
+          final path = Path()
+            ..moveTo(x, y - hgt)
+            ..quadraticBezierTo(x + w * 1.4, y - hgt * 0.45, x + w * 0.6, y + 2)
+            ..lineTo(x - w * 0.6, y + 2)
+            ..quadraticBezierTo(x - w * 1.4, y - hgt * 0.45, x, y - hgt)
+            ..close();
+          canvas.drawPath(path, Paint()..color = Color.lerp(m.layers[l], const Color(0xFF16261A), 0.55)!);
+        } else {
+          // ochre villa with a low terracotta roof
+          final hw = 14 + r.nextDouble() * 12;
+          canvas.drawRect(Rect.fromLTWH(x, y - hw * 0.62, hw, hw * 0.62 + 3), Paint()..color = Color.lerp(const Color(0xFFE8C48E), m.mist, 0.25)!);
+          canvas.drawPath(
+            Path()
+              ..moveTo(x - 2, y - hw * 0.62)
+              ..lineTo(x + hw / 2, y - hw * 0.86)
+              ..lineTo(x + hw + 2, y - hw * 0.62)
+              ..close(),
+            Paint()..color = const Color(0xFFB4553A),
+          );
+        }
+      } else if (lang == 'ja') {
         // cedar: a tall slim triangle
         final hgt = 14 + r.nextDouble() * 22.0 * (l - 1);
         final path = Path()

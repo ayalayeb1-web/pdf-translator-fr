@@ -39,7 +39,7 @@ class Practice {
 
   /// Activities for one lesson. [pool] supplies distractors from the whole course.
   List<PracticeStep> build(Lesson lesson, List<Item> pool, {required String lang}) {
-    final typeTerm = lang == 'es';
+    final typeTerm = lang == 'es' || lang == 'it';
     final sep = lang == 'ja' ? '' : ' ';
     final meanings = pool.map((i) => i.meaning).where((m) => m.isNotEmpty).toList();
     final terms = pool.map((i) => i.term).toList();
@@ -136,8 +136,8 @@ class AnswerCheck {
       .replaceAllMapped(RegExp(r'([aeiou])\1+'), (m) => m[1]!);
 
   static String stripAccents(String s) {
-    const from = 'áéíóúüñÁÉÍÓÚÜÑ';
-    const to = 'aeiouunAEIOUUN';
+    const from = 'áéíóúüñàèìòùÁÉÍÓÚÜÑÀÈÌÒÙ';
+    const to = 'aeiouunaeiouAEIOUUNAEIOU';
     final b = StringBuffer();
     for (final ch in s.split('')) {
       final i = from.indexOf(ch);
@@ -153,7 +153,7 @@ class AnswerCheck {
     for (final v in variants.isEmpty ? [expected] : variants) {
       if (_basic(given) == _basic(v)) return AnswerCheck(true);
       if (lang == 'ja' && _romaji(given) == _romaji(v)) return AnswerCheck(true);
-      if (lang == 'es' && stripAccents(_basic(given)) == stripAccents(_basic(v))) {
+      if ((lang == 'es' || lang == 'it') && stripAccents(_basic(given)) == stripAccents(_basic(v))) {
         return AnswerCheck(true, note: 'Accepté — attention aux accents : « $v »');
       }
     }

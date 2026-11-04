@@ -30,7 +30,7 @@ class SettingsScreen extends StatelessWidget {
           else if (voices.isEmpty)
             _Row(
               title: 'Aucune voix ${app.language.locale} installée',
-              subtitle: 'Windows : Paramètres → Heure et langue → Voix → Ajouter des voix → ${app.lang == 'ja' ? 'Japonais' : 'Espagnol (Espagne)'}. Redémarrez ensuite Senri.',
+              subtitle: 'Windows : Paramètres → Heure et langue → Voix → Ajouter des voix → ${const {'ja': 'Japonais', 'es': 'Espagnol (Espagne)', 'it': 'Italien (Italie)'}[app.lang]}. Redémarrez ensuite Senri.',
               warn: true,
             )
           else
@@ -46,7 +46,7 @@ class SettingsScreen extends StatelessWidget {
                   if (v == null) return;
                   await app.set('voice_${app.lang}', v);
                   await app.speech.configure(app.language.locale, v);
-                  app.speech.speak(app.lang == 'ja' ? 'こんにちは。よろしくお願いします。' : 'Hola, ¿qué tal? Encantada de conocerte.');
+                  app.speech.speak(const {'ja': 'こんにちは。よろしくお願いします。', 'es': 'Hola, ¿qué tal? Encantada de conocerte.', 'it': 'Ciao, come stai? Piacere di conoscerti.'}[app.lang]!);
                 },
               ),
             ),
@@ -66,14 +66,14 @@ class SettingsScreen extends StatelessWidget {
                   app.speech.normalRate = v;
                   app.speech.slowRate = (v * 0.64).clamp(0.15, 1.0);
                 },
-                onChangeEnd: (_) => app.speech.speak(app.lang == 'ja' ? 'ゆっくり話してください。' : 'Más despacio, por favor.'),
+                onChangeEnd: (_) => app.speech.speak(const {'ja': 'ゆっくり話してください。', 'es': 'Más despacio, por favor.', 'it': 'Più piano, per favore.'}[app.lang]!),
               ),
             ),
           ),
           _Row(
             title: 'Tester',
             subtitle: 'Écoutez une phrase type à vitesse naturelle puis lente.',
-            trailing: SpeakButtons(app.lang == 'ja' ? '駅はどこですか。' : '¿Dónde está la estación?'),
+            trailing: SpeakButtons(const {'ja': '駅はどこですか。', 'es': '¿Dónde está la estación?', 'it': 'Dov\'è la stazione?'}[app.lang]!),
           ),
         ]),
         _Group(title: 'Pratique', icon: Icons.bolt_rounded, children: [

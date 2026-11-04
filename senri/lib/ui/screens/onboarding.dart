@@ -105,7 +105,7 @@ class _OnboardingState extends State<Onboarding> {
                 const Spacer(),
                 Text('Une langue,\nun voyage.', style: context.text.displaySmall!.copyWith(color: const Color(0xFFF6F2EA), fontSize: 34)),
                 const SizedBox(height: 18),
-                Text('Japonais et espagnol d’Espagne, du niveau A1 au C2. Des leçons courtes avec un objectif clair, des révisions qui s’adaptent à vos erreurs, et un laboratoire pour travailler votre prononciation.',
+                Text('Japonais, espagnol d’Espagne et italien, du niveau A1 au C2. Des leçons courtes avec un objectif clair, des révisions qui s’adaptent à vos erreurs, et un laboratoire pour travailler votre prononciation.',
                     style: context.text.bodyMedium!.copyWith(color: const Color(0xFFB9BBC4))),
                 const SizedBox(height: 36),
                 for (final (i, s) in steps.indexed)
@@ -229,8 +229,8 @@ class _OnboardingState extends State<Onboarding> {
           const SizedBox(height: 8),
           Text('Le contenu rédigé couvre aujourd’hui les niveaux A1 et A2. B1 à C2 sont présentés comme programme.', style: context.text.bodyMedium!.copyWith(color: p.inkSoft)),
           const SizedBox(height: 28),
-          choice('A1', 'Je débute', lang == 'ja' ? 'A1 · JLPT N5 — hiragana, katakana, premières phrases' : 'A1 · DELE A1 — se présenter, premières phrases', icon: Icons.spa_rounded, selected: level == 'A1', onTap: () => setState(() => level = 'A1')),
-          choice('A2', 'J’ai déjà des bases', lang == 'ja' ? 'A2 · JLPT N4 — forme en te, envies, langage familier' : 'A2 · DELE A2 — passé, routines, conversations simples', icon: Icons.terrain_rounded, selected: level == 'A2', onTap: () => setState(() => level = 'A2')),
+          choice('A1', 'Je débute', const {'ja': 'A1 · JLPT N5 — hiragana, katakana, premières phrases', 'es': 'A1 · DELE A1 — se présenter, premières phrases', 'it': 'A1 · CILS A1 — se présenter, commander au bar'}[lang]!, icon: Icons.spa_rounded, selected: level == 'A1', onTap: () => setState(() => level = 'A1')),
+          choice('A2', 'J’ai déjà des bases', const {'ja': 'A2 · JLPT N4 — forme en te, envies, langage familier', 'es': 'A2 · DELE A2 — passé, routines, conversations simples', 'it': 'A2 · CILS A2 — passé, marché, voyage, futur'}[lang]!, icon: Icons.terrain_rounded, selected: level == 'A2', onTap: () => setState(() => level = 'A2')),
           Panel(
             onTap: () => _startQuiz(app),
             semanticLabel: 'Estimer mon niveau',

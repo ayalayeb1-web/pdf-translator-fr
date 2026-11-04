@@ -19,12 +19,13 @@ Future<AppState> bootstrap(Desktop desktop, {bool inMemory = false}) async {
     Store.open(inMemory: inMemory),
     Course.load('ja'),
     Course.load('es'),
+    Course.load('it'),
   ]);
   final speech = Speech();
   await speech.init();
   final state = AppState(
     store: results[0] as Store,
-    courses: {'ja': results[1] as Course, 'es': results[2] as Course},
+    courses: {'ja': results[1] as Course, 'es': results[2] as Course, 'it': results[3] as Course},
     speech: speech,
     desktop: desktop,
   );

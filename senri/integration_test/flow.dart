@@ -65,7 +65,8 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
 
   // ---- onboarding
   await shot(t, '01-onboarding-langue');
-  await tapText(t, 'Espagnol · Español');
+  final flowLang = Platform.environment['SENRI_FLOW_LANG'] ?? 'es';
+  await tapText(t, const {'es': 'Espagnol · Español', 'it': 'Italien · Italiano', 'ja': 'Japonais · 日本語'}[flowLang]!);
   await tapText(t, 'Continuer');
   await tapText(t, 'Je débute');
   await tapText(t, 'Continuer');
@@ -77,7 +78,7 @@ Future<AppState> runFlow(WidgetTester t, {required Desktop desktop}) async {
   await waitFor(t, () => state.activeLesson != null);
   await settle(t);
   expect(state.activeLesson, isNotNull);
-  expect(state.lang, 'es');
+  expect(state.lang, flowLang);
 
   // ---- lesson: discover, then practise until the result screen
   await shot(t, '03-lecon-decouverte');

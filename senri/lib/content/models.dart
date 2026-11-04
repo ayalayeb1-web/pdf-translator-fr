@@ -43,7 +43,16 @@ class StudyLanguage {
     examLabel: 'DELE',
     regionNote: 'Espagnol d’Espagne (castillan)',
   );
-  static const all = [ja, es];
+  static const it = StudyLanguage(
+    code: 'it',
+    locale: 'it-IT',
+    name: 'Italien',
+    nativeName: 'Italiano',
+    glyph: 'è',
+    examLabel: 'CILS',
+    regionNote: 'Italien standard',
+  );
+  static const all = [ja, es, it];
   static StudyLanguage of(String code) => all.firstWhere((l) => l.code == code, orElse: () => ja);
 }
 
