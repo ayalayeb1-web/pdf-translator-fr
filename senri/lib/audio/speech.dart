@@ -35,6 +35,7 @@ class Speech {
   double slowRate = 0.32;
   Completer<void>? _done;
   bool _busy = false;
+  static const _platformTimeout = Duration(seconds: 2);
 
   /// Build with --dart-define=SENRI_NO_TTS=true to disable native speech (diagnostics / CI).
   static const disabled = bool.fromEnvironment('SENRI_NO_TTS');
@@ -53,8 +54,10 @@ class Speech {
         error = '$m';
         _finished();
       });
-      await tts.awaitSpeakCompletion(true);
-      final raw = await tts.getVoices;
+      // Do not let speak() block on the platform: completion arrives through the handlers,
+      // and a timeout below guarantees we never wait forever if a platform never reports it.
+      await tts.awaitSpeakCompletion(false);
+      final raw = await Future<dynamic>.value(tts.getVoices).timeout(const Duration(seconds: 5), onTimeout: () => const []);
       _voices = [
         for (final v in (raw as List? ?? const []))
           if (v is Map) VoiceInfo('${v['name'] ?? ''}', '${v['locale'] ?? v['language'] ?? ''}'),
@@ -95,8 +98,8 @@ class Speech {
     final tts = _tts;
     if (tts == null) return;
     try {
-      await tts.setLanguage(locale);
-      if (chosen != null) await tts.setVoice({'name': chosen.name, 'locale': chosen.locale});
+      await tts.setLanguage(locale).timeout(_platformTimeout, onTimeout: () => null);
+      if (chosen != null) await tts.setVoice({'name': chosen.name, 'locale': chosen.locale}).timeout(_platformTimeout, onTimeout: () => null);
     } catch (_) {}
   }
 
@@ -112,8 +115,12 @@ class Speech {
     nowPlaying.value = NowPlaying(text: text, playing: true, slow: slow);
     _done = Completer<void>();
     try {
-      await tts.setSpeechRate(slow ? slowRate : normalRate);
-      await tts.speak(text);
+      await tts.setSpeechRate(slow ? slowRate : normalRate).timeout(_platformTimeout, onTimeout: () => null);
+      unawaited(Future.sync(() => tts.speak(text)).catchError((Object e) {
+        error = '$e';
+        _finished();
+        return null;
+      }));
     } catch (e) {
       error = '$e';
       _finished();
@@ -130,7 +137,7 @@ class Speech {
   Future<void> stop() async {
     if (!nowPlaying.value.playing) return; // calling the native stop() while idle is unsafe on some platforms
     try {
-      await _tts?.stop();
+      await _tts?.stop().timeout(_platformTimeout, onTimeout: () => null);
     } catch (_) {}
     _finished();
   }
