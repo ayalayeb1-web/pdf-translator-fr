@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# A newer push cancels older runs, so an old build can never overwrite the published release.
+concurrency:
+  group: senri-windows-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows:
     runs-on: windows-latest
